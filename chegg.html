@@ -1,0 +1,482 @@
+<!doctype HTML>
+<html>
+	<head>
+		<title>Play Chegg online</title>
+		<script>
+			addEventListener("error", (e) => {
+				alert(e.lineno+":"+e.colno+", "+e.message+"\nMain")
+			});
+		</script>
+		<meta charset="utf-8">
+		<style id="allCss">
+			body {
+				padding: 0px;
+				margin: 0px;
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+			}
+			canvas {
+				overflow: hidden;
+				image-rendering: pixelated;
+				border: black thin solid;
+				display: inline;
+			}
+		</style>
+	</head>
+	<body id="body">
+		<div id="multiinit"><e id="peerid">Connecting... </e><button id="cbut" onclick="copyid()" style="visibility: hidden;background-color: #00000000; border: none;"><img id="cimg" src="./images/ui/copy.png" style="height:1em;"></button><br><a id="conlink"></a><button id="cbut2" onclick="copylink()" style="visibility: hidden;background-color: #00000000; border: none;"><img id="cimg2" src="./images/ui/copy.png" style="height:1em;"></button><br><input id="inputid" placeholder="Opponent's id" onchange="connect()"></input></div><div style="width:100%;height:100%;display:flex;justify-content:center;align-items:center;" id="loadBarDiv"><progress style="width:50%;" id="loadBar" max="1" value="0"></progress></div><div id="out"></div><br>
+		<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
+		<script>
+			const inIframe = window.self !== window.top;
+			
+			function imageLoaded() {
+				loadedc++
+				loadBar.value = loadedc/maxload
+				if (loadedc == maxload) imagesLoaded()
+			}	
+			function imagesLoaded() {
+				loadBarDiv.remove()
+				loaded = true
+				/*const game = new netplayjs.LockstepWrapper(Game)
+				game.stats.remove()
+				game.start();*/
+			}
+			
+			let loaded = false
+			
+			async function loadJSON(url,func) {
+				const request = new Request(url);
+				const response = await fetch(request);
+				const done = await response.json()
+				func(done)
+				return(done)
+			}
+			
+			function copyid() {
+				navigator.clipboard.writeText(peerID)
+				cimg.src = "./images/ui/copied.png"
+				setTimeout(() => {
+					cimg.src = "./images/ui/copy.png"
+				},1000)
+			}
+			function copylink() {
+				navigator.clipboard.writeText(conlink.innerHTML)
+				cimg2.src = "./images/ui/copied.png"
+				setTimeout(() => {
+					cimg2.src = "./images/ui/copy.png"
+				},1000)
+			}
+			
+			const unitnames = ["villager"]
+			const maxload = unitnames.length
+			let loadedc = 0
+			let units = []
+			let unitimgs = []
+			unitnames.forEach((e) => {
+				loadJSON("./units/"+e+".json",function (e) {
+					units.push(e)
+					unitimgs.push(new Image())
+					unitimgs.at(-1).src = "./images/units/"+units.at(-1).img+".png"
+					unitimgs.at(-1).onload = imageLoaded
+				})
+			})
+			/*unitnames.forEach((e) => {
+				units.push(new Image())
+				units.at(-1).src = "./images/units/"+e+".png"
+				units.at(-1).onload = imageLoaded
+			})*/
+			
+			let ping
+			
+			function conevent(first) {
+				conn.on("data", function (data) {
+					out.insertAdjacentHTML("beforeend","<br>Received: "+typeof data+": "+JSON.stringify(data));
+					if (data == "🫱") { //confirm handshake (if this player isn't connected to someone else)
+						conn.send("🤝");
+						initGame()
+					} else if (data == "🤝" && first) { //recieve confirmation
+						initGame()
+					}
+					if (data == "turn") { //start next turn
+						turn = true
+						manamax = Math.min(manamax+1,6)
+						mana = manamax
+						myUnits.filter(u => u.moved).forEach((e) => {
+							e.moved = 0
+						})
+						//setTimeout(() => {conn.send("turn")},500)
+					}
+					switch (data.dataType) {
+						case 0:
+							enemUnits.push({...data,"dataType":undefined})
+							break;
+						case 1:
+							enemUnits[data.unit].x = data.x
+							enemUnits[data.unit].y = data.y
+							break;
+						case 2:
+							if (myUnits[data.unit].type == 0) {
+								state = 1
+								clearInterval(gloop)
+								let ctx = canvas.getContext("2d")
+								ctx.fillStyle = "#F00"
+								ctx.textBaseline = "top"
+								ctx.font = "100px Arial"
+								ctx.fillText("You lost",1250/2,0)
+							}
+							myUnits.splice(data.unit,1)
+							break;
+					}
+				});
+				out.insertAdjacentHTML("beforeend","<br>Connected to: "+conn.peer+" as player "+(pid+1));
+				if (first) {
+					conn.send("🫱"); //initiate handshake
+				}
+			}
+			
+			function initGame() {
+				multiinit.innerHTML = "<canvas id='canvas' width='1250px' height='800px'></canvas>"
+				multiinit.style.width = "100%"
+				multiinit.style.textAlign = "center"
+				canvas.style.margin = "auto"
+				ctx = canvas.getContext("2d")
+				ctx.webkitImageSmoothingEnabled = false
+				ctx.mozImageSmoothingEnabled = false
+				ctx.imageSmoothingEnabled = false
+				if (pid == 1) conn.send("turn")
+				setInterval(() => {
+					if (conn.peerConnection) {
+						conn.peerConnection.getStats().then((r) => {
+							r.forEach(function(t) {
+								if (t.type === "candidate-pair") {
+									if (t.currentRoundTripTime !== undefined) {
+										ping = t.currentRoundTripTime * 1000;
+									}
+								}
+							})
+						})
+						.catch ((err) => {
+							alert(err.message)
+						})
+					}
+				},1000)
+				gloop = setInterval(() => {
+					canvas.style.width = Math.min(100,(100/(canvas.height/canvas.width))*(window.innerHeight/window.innerWidth))/3+"%"
+					ctx.clearRect(0,0,canvas.width,canvas.height)
+					ctx.textBaseline = "top"
+					ctx.font = "20px Arial"
+					for (let i=0;i<10;i++) {
+						for (let j=0;j<8;j++) {
+							const pa = Math.abs(i-4.5) < 3
+							ctx.fillStyle = "hsl("+(i<=1 ? 220 : 0)+" "+(pa ? 0 : 100)+" "+((i+j)%2==0 ? (pa ? 0 : 25) : (pa ? 100 : 50))+")"
+							ctx.fillRect(i*100+50,j*100,100,100)
+						}
+					}
+					ctx.fillStyle = "#FFF"
+					ctx.textAlign = "left"
+					if (ping) ctx.fillText("ping: "+ping+"ms",0,0)
+					ctx.strokeRect(1050,0,200,800)
+					ctx.fillStyle = "#A00"
+					ctx.fillRect(0,0,50,800)
+					ctx.fillStyle = "#FA0"
+					ctx.strokeStyle = "#000"
+					ctx.lineWidth = 3
+					ctx.fillRect(0,800-(mana*800/6),50,mana*800/6)
+					for (let i=0;i<mana;i++) {
+						ctx.strokeRect(0,800-(i*800/6),50,-800/6)
+					}
+					ctx.strokeStyle = "#FFF"
+					ctx.strokeRect(0,800-(manamax*800/6),50,manamax*800/6)
+					ctx.lineWidth = 1
+					ctx.fillStyle = turn ? (myUnits.some(u => u.type == 0) ? "#FA0" : "#AAA") : "#A00"
+					ctx.fillRect(1050,700,200,100)
+					ctx.fillStyle = "#000"
+					ctx.textAlign = "center"
+					ctx.font = "50px arial"
+					ctx.fillText("End turn",1150,725)
+					ctx.fillStyle = pid ? "#00F" : "#F00"
+					ctx.fillText("Player "+(pid+1),1150,625)
+					ctx.fillStyle = "#FFF"
+					ctx.strokeStyle = "#000"
+					ctx.lineWidth = 2
+					draw.forEach((e,ee) => {
+						if (ee == sel && seltype == 0) {
+							ctx.fillStyle = "#FF7"
+							ctx.fillRect(1050+Math.floor(ee/8)*100,100*(ee%8),100,100)
+							ctx.fillStyle = "#FFF"
+						}
+						ctx.drawImage(unitimgs[e],1050+Math.floor(ee/8)*100,100*(ee%8),100,100)
+						ctx.fillText("("+(units[e].cost ?? 0)+")",1100+Math.floor(ee/8)*100,25+100*(ee%8))
+						ctx.strokeText("("+(units[e].cost ?? 0)+")",1100+Math.floor(ee/8)*100,25+100*(ee%8))
+					})
+					
+					if (seltype == 1) {
+						ctx.fillStyle = "#0F07"
+						movements.forEach((e) => {
+							if (e[0] >= 0 && e[0] <= 9) ctx.fillRect(e[0]*100+50,e[1]*100,100,100)
+						})
+						ctx.fillStyle = "#F007"
+						attacks.forEach((e) => {
+							if (e[0] >= 0 && e[0] <= 9) ctx.fillRect(e[0]*100+50,e[1]*100,100,100)
+						})
+						/*const un = myUnits[sel]
+						const unit = units[un.type]
+						switch (unit.move.style) {
+							case (0):
+								const voff = Math.floor(unit.move.set.length/2)
+								unit.move.set.forEach((e,ee) => {
+									const hoff = Math.floor(e.length/2)
+									e.forEach((r,rr) => {
+										if (r) ctx.fillRect((un.x-hoff+rr)*100+50,(un.y-voff+ee)*100,100,100)
+									})
+								})
+								break;
+						}*/
+					}
+					
+					myUnits.forEach((e) => {
+						ctx.drawImage(unitimgs[e.type],50+100*e.x,100*e.y,100,100)
+					})
+					ctx.translate(50,0)
+					ctx.rotate(Math.PI)
+					enemUnits.forEach((e) => {
+						ctx.drawImage(unitimgs[e.type],-100-100*e.x,-100-100*e.y,100,100)
+					})
+					ctx.setTransform(1,0,0,1,0,0)
+				},16)
+				canvas.addEventListener("click", function (e) {
+					const loc = {"x":e.offsetX/canvas.offsetWidth*canvas.width,"y":e.offsetY/canvas.offsetHeight*canvas.height}
+					clickable.forEach((r) => {
+						if (loc.x >= r.x && loc.y >= r.y && loc.x <= r.x+r.w && loc.y <= r.y+r.h) r.onclick({"x":loc.x-r.x,"y":loc.y-r.y})
+					})
+				})
+			}
+			
+			function addToDraw(id) {
+				clickable.push({"x":1050+Math.floor(draw.length/8)*100,"y":100*(draw.length%8),"w":100,"h":100,"onclick":function () {selFromDraw(this.pos)},"pos":draw.length})
+				draw.push(id)
+			}
+			function selFromDraw(ind) {
+				if (sel == undefined && turn) {
+					sel = ind
+					seltype = 0
+				}
+			}
+			
+			let pid
+			let peer = new Peer();
+			let peerID
+			let conn
+			let ctx
+			let mana = 0
+			let manamax = 0
+			let turn = false
+			let myUnits = []
+			let enemUnits = []
+			let draw = []
+			let sel
+			let seltype
+			let movements
+			let attacks
+			let state = 0
+			let gloop
+			let deck = [1,1,1]
+			let clickable = [{"x":1050,"y":700,"w":200,"h":100,"onclick":function() {if (turn && myUnits.some(u => u.type == 0)) {conn.send("turn");turn = false;sel=undefined;seltype=undefined} else if (turn) {alert("Place your villager first")}}},{"x":50,"y":0,"w":1000,"h":800,"onclick":function(off) {
+				const roff = {"x":Math.floor(off.x/100),"y":Math.floor(off.y/100)}
+				if (turn) {
+					switch (seltype) {
+						case (0):
+							if (sel != undefined && (pid == 0 && roff.x >= 8) || (pid == 1 && roff.x <= 1)) {
+								const newunit = {"x":roff.x,"y":roff.y,"type":draw[sel],"moved":0};
+								mana -= (units[newunit.type].cost ?? 0)
+								myUnits.push(newunit);
+								conn.send({...newunit,"dataType":0});
+								draw.splice(sel,1);
+								sel = undefined;
+								seltype = undefined;
+							}
+							break;
+						case (undefined):
+							const found = myUnits.findIndex(u => u.x == roff.x && u.y == roff.y && ((u.moved == 1 && mana > 0) || u.moved == 0))
+							if (found != -1) {
+								sel = found
+								seltype = 1
+								movements = []
+								const un = myUnits[sel]
+								const unit = units[un.type]
+								if (unit.move) {
+									processMove(un,unit,false)
+								}
+								if (unit.attack && un.moved < 2 && mana > 0) {
+									if (typeof unit.attack == "object") {
+										attacks = []
+									} else {
+										attacks = []
+										processMove(un,unit,true)
+									}
+								}
+							}
+							break;
+						case (1):
+							let move
+							let attack
+							if (move = movements.find(m => m[0]==roff.x && m[1]==roff.y)) {
+								const un = myUnits[sel]
+								if (un.moved == 1) mana--
+								un.x = move[0]
+								un.y = move[1]
+								conn.send({"dataType":1,"unit":sel,"x":un.x,"y":un.y})
+								un.moved++
+								sel = undefined
+								seltype = undefined
+							}
+							if (attack = attacks.find(m => m[0]==roff.x && m[1]==roff.y)) {
+								const un = myUnits[sel]
+								mana--
+								const target = enemUnits.findIndex(u => u.x == attack[0] && u.y == attack[1])
+								if (target >= 0) {
+									if (enemUnits[target].type == 0) {
+										state = 2
+										clearInterval(gloop)
+										let ctx = canvas.getContext("2d")
+										ctx.fillStyle = "#0F0"
+										ctx.textBaseline = "top"
+										ctx.font = "100px Arial"
+										ctx.fillText("YOU WON YIPPEE",1250/2,0)
+									}
+									enemUnits.splice(target,1)
+									conn.send({"dataType":2,"unit":target})
+									un.moved = 2
+									sel = undefined
+									seltype = undefined
+								}
+							}
+							break;
+					}
+				}
+			}}]
+			addToDraw(0)
+			
+			function processMove(un,unit,att) {
+				switch (unit.move.style) {
+					case (0):
+						const voff = Math.floor(unit.move.set.length/2)
+						unit.move.set.forEach((e,ee) => {
+							const hoff = Math.floor(e.length/2)
+							e.forEach((r,rr) => {
+								//out.insertAdjacentHTML("beforeend",att+","+enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)+": "+(att == enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)))
+								if (r && (att == enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) (att ? attacks : movements).push([(un.x-hoff+rr),(un.y-voff+ee)])
+							})
+						})
+					break;
+				}
+			}
+			
+			// Source - https://stackoverflow.com/a/42067456
+			// Posted by Jamesfo, modified by community. See post 'Timeline' for change history
+			// Retrieved 2026-09-04, License - CC BY-SA 4.0
+			GET = location.search.substr(1).split("&").reduce((o,i)=>(u=decodeURIComponent,[k,v]=i.split("="),o[u(k)]=v&&u(v),o),{});
+			
+			function connect() {
+				if (!conn) {
+					conn = peer.connect(inputid.value);
+					conn.on("open", function () {
+						pid = 1
+						conevent(true)
+					})
+				}
+			}
+			
+			peer.on("error", function(err) {
+				alert(JSON.stringify(err))
+			})
+			
+			peer.on('connection', function(conne) { 
+				if (conn) {
+					conne.close()
+				} else {
+					conn = conne
+					pid = 0
+					/*setInterval(() => {
+						conn.send("Ping: "+peerID)
+					},5000)*/
+					conevent(false)
+				}
+			});
+			
+			peer.on("open", function (id) {
+				peerID = id
+				if (GET.opid) {
+					inputid.value = GET.opid
+					connect()
+				} else {
+					peerid.innerHTML = id
+					const link = window.location.href+(window.location.href.includes("?") ? "&" : "?")+"opid="+id
+					conlink.innerHTML = link
+					conlink.href = link
+					cbut.style.visibility = "visible"
+					cbut2.style.visibility = "visible"
+					if (!inIframe) {
+						body.insertAdjacentHTML("beforeend","<iframe style='width:50%;' id='ifr' src='"+link+"'></iframe>")
+						ifr.style.height = /*document.querySelectorAll("canvas")[0].offsetHeight*0.75*/500+"px"
+						ifr.parent = ""
+					}
+				}
+				//console.log("My peer ID is: " + id);
+			});
+			
+			/*let pid
+			class Game extends netplayjs.Game {
+				static timestep = 1000 / 60;
+				static canvasSize = { width: 1000, height: 800 };
+				constructor(canvas,players) {
+					super();
+					this.turn = 0
+					const ctx = canvas.getContext("2d")
+					body.style.height = ""
+					body.style.width = ""
+					canvas.style.width = inIframe ? "100%" : "50%"
+					canvas.style.height = inIframe ? "100%" : "50%"
+					canvas.style.boxShadow = ""
+					canvas.style.margin = ""
+					canvas.style.position = "sticky"
+					//canvas.style.left = "0px"
+					ctx.font = "20px Arial"
+					canvas.style.backgroundColor = "white"
+					body.style.padding = "0px"
+					//allCss.sheet.cssRules[1].style.visibility = "hidden"
+					ctx.webkitImageSmoothingEnabled = false
+					ctx.mozImageSmoothingEnabled = false
+					ctx.imageSmoothingEnabled = false
+					players.forEach((e) => {
+						if (e.isLocal && pid == undefined) pid = e.id
+					})
+					if (inIframe) pid = 1
+				}
+				tick(playerInputs) {
+					for (const [player, input] of playerInputs.entries()) {
+						
+					}
+				}
+				draw(canvas) {
+					const ctx = canvas.getContext("2d")
+					for (let i=0;i<10;i++) {
+						for (let j=0;j<8;j++) {
+							const pa = Math.abs(i-4.5) < 3
+							ctx.fillStyle = "hsl("+(i<=1 ? 220 : 0)+" "+(pa ? 0 : 100)+" "+((i+j)%2==0 ? (pa ? 0 : 25) : (pa ? 100 : 50))+")"{},
+							ctx.fillRect(i*100,j*100,100,100)
+						}
+					}
+				}
+			}*/
+			
+			/*if (!inIframe) {
+				//body.insertAdjacentHTML("beforeend",JSON.stringify(Object.keys(window)))
+				body.insertAdjacentHTML("beforeend","<iframe style='width:50%;' id='ifr' src='"+window.location.href+"'></iframe>")
+				ifr.style.height = 500+"px"
+				ifr.parent = ""
+			}*/
+		</script>
+	</body>
+</html>
