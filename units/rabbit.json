@@ -1,0 +1,27 @@
+{
+	"img": "rabbit",
+	"move": {
+		"style": 2,
+		"set": [
+			{
+				"dest": [0,-2],
+				"jumpOver": [0,-1]
+			},
+			{
+				"dest": [0,2],
+				"jumpOver": [0,1]
+			},
+			{
+				"dest": [-2,0],
+				"jumpOver": [-1,0]
+			},
+			{
+				"dest": [2,0],
+				"jumpOver": [1,0]
+			}
+		]
+	},
+	"jumpOver": {
+		"draw": 1
+	}
+}

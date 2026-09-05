@@ -1,0 +1,21 @@
+{
+	"img": "zombie",
+	"move": {
+		"style":1,
+		"set": [
+			[true],
+			[true],
+			[true]
+		],
+		"offset":[-1,0]
+	},
+	"attack": {
+		"style":1,
+		"set": [
+			[false,true,false],
+			[true,false,true],
+			[false,true,false]
+		]
+	},
+	"cost":1
+}

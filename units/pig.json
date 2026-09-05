@@ -1,19 +1,18 @@
 {
-	"img": "villager",
+	"img": "pig",
 	"move": {
 		"style":0,
 		"set": [
 			[true,true,true],
 			[true,false,true],
 			[true,true,true]
-		],
-		"nofree": true
+		]
 	},
-	"attack": {
-		"style": 0,
-		"goto": true
+	"cost": 1,
+	"spawn": {
+		"draw": 1
 	},
 	"death": {
-		"lose": true
+		"draw": 1
 	}
 }

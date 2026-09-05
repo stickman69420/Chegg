@@ -1,19 +1,17 @@
 {
-	"img": "villager",
+	"img": "creeper",
 	"move": {
 		"style":0,
 		"set": [
 			[true,true,true],
 			[true,false,true],
 			[true,true,true]
-		],
-		"nofree": true
+		]
 	},
 	"attack": {
-		"style": 0,
-		"goto": true
+		"style": 2,
+		"size": [3,3],
+		"ffire": true
 	},
-	"death": {
-		"lose": true
-	}
+	"cost": 1
 }
