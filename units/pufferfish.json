@@ -1,0 +1,22 @@
+{
+	"img": "pufferfish",
+	"move": {
+		"style": 0,
+		"set": [
+			[false,true,false],
+			[true,false,true],
+			[false,true,false]
+		]
+	},
+	"attack": {
+		"style": 3,
+		"set": [
+			[true,false,true],
+			[false,false,false],
+			[true,false,true]
+		],
+		"ffire": true,
+		"img": "spike"
+	},
+	"cost": 2
+}

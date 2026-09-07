@@ -1,0 +1,34 @@
+{
+	"img": "iron_golem",
+	"cost": 2,
+	"move": {
+		"style": 0,
+		"set": [
+			[true,true,true],
+			[true,false,true],
+			[true,true,true]
+		]
+	},
+	"attack": [
+		{
+			"style": 2,
+			"size": [3,1],
+			"offset": [0,-1]
+		},
+		{
+			"style": 2,
+			"size": [3,1],
+			"offset": [0,1]
+		},
+		{
+			"style": 2,
+			"size": [1,3],
+			"offset": [-1,0]
+		},
+		{
+			"style": 2,
+			"size": [1,3],
+			"offset": [1,0]
+		}
+	]
+}

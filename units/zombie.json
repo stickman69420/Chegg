@@ -15,7 +15,8 @@
 			[false,true,false],
 			[true,false,true],
 			[false,true,false]
-		]
+		],
+		"img": "slash"
 	},
 	"cost":1
 }

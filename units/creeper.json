@@ -11,7 +11,8 @@
 	"attack": {
 		"style": 2,
 		"size": [3,3],
-		"ffire": true
+		"ffire": true,
+		"img": "explosion"
 	},
 	"cost": 1
 }

@@ -23,5 +23,6 @@
 	},
 	"jumpOver": {
 		"draw": 1
-	}
+	},
+	"cost": 2
 }
