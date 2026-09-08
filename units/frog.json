@@ -1,0 +1,18 @@
+{
+	"img": "frog",
+	"cost": 2,
+	"move": {
+		"style":0,
+		"set": [
+			[false,false,true,false,false],
+			[false,true,true,true,false],
+			[true,true,false,true,true],
+			[false,true,true,true,false],
+			[false,false,true,false,false]
+		]
+	},
+	"attack": {
+		"pull": 2,
+		"style": 4
+	}
+}

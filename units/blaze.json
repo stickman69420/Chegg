@@ -1,0 +1,22 @@
+{
+	"img": "blaze",
+	"cost": 3,
+	"move": {
+		"style": 0,
+		"set": [
+			[true,false,true],
+			[false],
+			[true,false,true]
+		]
+	},
+	"attack": {
+		"style": 1,
+		"set": [
+			[true],
+			[true],
+			[true,true,false,true,true],
+			[true],
+			[true]
+		]
+	}
+}

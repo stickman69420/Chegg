@@ -1,0 +1,17 @@
+{
+	"img": "phantom",
+	"cost": 3,
+	"move": {
+		"style": 0,
+		"set": [
+			[true,false,true,false,true],
+			[true,false,true],
+			[true,false,false,false,true],
+			[true,false,true],
+			[true,false,true,false,true]
+		]
+	},
+	"attack": {
+		"style": 0
+	}
+}
