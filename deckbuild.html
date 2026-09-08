@@ -1,0 +1,67 @@
+<!doctype HTML>
+<html>
+	<head>
+		<title>Nice deck</title>
+		<script>
+			addEventListener("error", (e) => {
+				alert(e.lineno+":"+e.colno+", "+e.message+"\nMain")
+			});
+		</script>
+		<style>
+			img {
+				image-rendering: pixelated;
+				height: 5em;
+			}
+		</style>
+	</head>
+	<body>
+		<a href="./index.html">Back to home</a>
+		<div style="width:100%;height:100%;display:flex;justify-content:center;align-items:center;" id="loadBarDiv"><progress style="width:50%;" id="loadBar" max="1" value="0"></progress></div><div id="out"></div>
+		<script src="./definitions.js"></script>
+		<script>
+			const maxload = unitnames.length*2
+			function allDone() {
+				document.body.insertAdjacentHTML("beforeend","<div>Your deck")
+				for (let i=0;i<15;i++) {
+					document.body.insertAdjacentHTML("beforeend","<img onclick='assign("+i+")' id='min"+i+"' src='./images/units/"+(deck[i] ? units[deck[i]].img : "empty")+".png'>")
+				}
+				document.body.insertAdjacentHTML("beforeend","</div><br><button onclick='save()'>Save</button><div>Player 2 (local multiplayer only)")
+				for (let i=0;i<15;i++) {
+					document.body.insertAdjacentHTML("beforeend","<img onclick='assign2("+i+")' id='2min"+i+"' src='./images/units/"+(deck2[i] ? units[deck2[i]].img : "empty")+".png'>")
+				}
+				document.body.insertAdjacentHTML("beforeend","</div><br><button onclick='save2()'>Save</button><div>")
+				units.forEach((e,ee) => {
+					if (ee != 0) document.body.insertAdjacentHTML("beforeend","<img onclick='sel("+ee+")' id='sel"+ee+"' src='./images/units/"+e.img+".png'>")
+				})
+				document.body.insertAdjacentHTML("beforeend","</div>")
+			}
+			
+			let selled
+			function assign(ind) {
+				deck[ind] = selled
+				document.getElementById("min"+ind).src = './images/units/'+(deck[ind] ? units[deck[ind]].img : "empty")+".png"
+			}
+			function assign2(ind) {
+				deck2[ind] = selled
+				document.getElementById("2min"+ind).src = './images/units/'+(deck2[ind] ? units[deck2[ind]].img : "empty")+".png"
+			}
+			function save() {
+				localStorage.setItem("deck",JSON.stringify(deck.filter(d => d)))
+			}
+			function save2() {
+				localStorage.setItem("deck2",JSON.stringify(deck2.filter(d => d)))
+			}
+			function sel(ind) {
+				if (selled) document.getElementById("sel"+selled).style.backgroundColor = "#0000"
+				if (selled != ind) {
+					selled = ind
+					document.getElementById("sel"+ind).style.backgroundColor = "#FF7"
+				} else {
+					selled = undefined
+				}
+			}
+			
+			loadUnits()
+		</script>
+	</body>
+</html>

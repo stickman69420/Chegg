@@ -32,6 +32,7 @@
 	<body id="body">
 		<div id="multiinit"><a href="./index.html">Back to home</a><br><a href="./chegg.html?offline=true">Switch to offline</a><br><e id="peerid">Connecting... </e><button id="cbut" onclick="copyid()" style="visibility: hidden;background-color: #00000000; border: none;"><img id="cimg" src="./images/ui/copy.png" style="height:1em;"></button><br><a id="conlink"></a><button id="cbut2" onclick="copylink()" style="visibility: hidden;background-color: #00000000; border: none;"><img id="cimg2" src="./images/ui/copy.png" style="height:1em;"></button><br><input id="inputid" placeholder="Opponent's id" onchange="connect()"></input></div><div style="width:100%;height:100%;display:flex;justify-content:center;align-items:center;" id="loadBarDiv"><progress style="width:50%;" id="loadBar" max="1" value="0"></progress></div><div id="out"></div><br>
 		<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
+		<script src="./definitions.js"></script>
 		<script>
 		
 			// Source - https://stackoverflow.com/a/42067456
@@ -46,9 +47,9 @@
 						case ("draw"):
 							if (mine) {
 								for (let i=0;i<value;i++) {
-									if (deck.length > 0) {
-										addToDraw(deck[0])
-										deck.splice(0,1)
+									if (mydeck.length > 0) {
+										addToDraw(mydeck[0])
+										mydeck.splice(0,1)
 									}
 								}
 							}
@@ -59,6 +60,7 @@
 							let ctx = canvas.getContext("2d")
 							ctx.fillStyle = !mine ? "#0F0" : "#F00"
 							ctx.textBaseline = "top"
+							ctx.textAlign = "center"
 							ctx.font = "100px Arial"
 							ctx.fillText(!mine ? "YOU WON YIPPEE" : "You lost",1250/2,0)
 							break;
@@ -66,39 +68,12 @@
 				}
 			}
 			
+			function allDone() {
+				glc++
+				if (glc == 2) initGame()
+			}
+			
 			const inIframe = window.self !== window.top;
-			
-			function imageLoaded() {
-				loadedc++
-				loadBar.value = loadedc/maxload
-				if (loadedc == maxload) imagesLoaded()
-			}	
-			function imagesLoaded() {
-				loadBarDiv.remove()
-				loaded = true
-				allDone()
-				/*const game = new netplayjs.LockstepWrapper(Game)
-				game.stats.remove()
-				game.start();*/
-			}
-			
-			let loaded = false
-			
-			async function loadJSON(url,func) {
-				try {
-					const request = new Request(url);
-					const response = await fetch(request);
-					const done = await response.json()
-					let args = []
-					for (let i = 0; i < arguments.length; ++i) args[i] = arguments[i]
-					args.splice(0,2)
-					func(done,...args)
-					imageLoaded()
-					return(done)
-				} catch (err) {
-					alert(err)
-				}
-			}
 			
 			function copyid() {
 				navigator.clipboard.writeText(peerID)
@@ -115,33 +90,22 @@
 				},1000)
 			}
 			
-			function allDone() {
-				glc++
-				if (glc == 2) initGame()
-			}
-			
-			const unitnames = ["villager","zombie","creeper","pig","rabbit","pufferfish","iron_golem"]
-			const attacknames = ["slash","explosion","spike"]
-			const maxload = unitnames.length*2+attacknames.length
-			let loadedc = 0
+			const attacknames = ["slash","explosion","spike","sweepu","sweepd","sweepl","sweepr"]
+			const bgimgnames = ["black","white","blue","lblue","red","lred"]
+			const maxload = unitnames.length*2+attacknames.length+bgimgnames.length
+			loadUnits()
 			let glc = 0
-			let units = []
-			let unitimgs = []
 			let attackimgs = {}
-			
-			
-			unitnames.forEach((e,ee) => {
-				loadJSON("./units/"+e+".json",function (e,i) {
-					units[i] = (e)
-					unitimgs[i] = new Image()
-					unitimgs[i].src = "./images/units/"+units[i].img+".png"
-					unitimgs[i].onload = imageLoaded
-				},ee)
-			})
+			let bgimgs = []
 			attacknames.forEach((e) => {
 				attackimgs[e] = new Image()
 				attackimgs[e].src = "./images/attacks/"+e+".png"
 				attackimgs[e].onload = imageLoaded
+			})
+			bgimgnames.forEach((e,ee) => {
+				bgimgs[ee] = new Image()
+				bgimgs[ee].src = "./images/ui/"+e+".png"
+				bgimgs[ee].onload = imageLoaded
 			})
 			/*unitnames.forEach((e) => {
 				units.push(new Image())
@@ -166,12 +130,14 @@
 					turncount++
 					if (turncount == 2) {
 						for (let i=0;i<3;i++) {
-							addToDraw(deck[0])
-							deck.splice(0,1)
+							if (mydeck.length > 0) {
+								addToDraw(mydeck[0])
+								mydeck.splice(0,1)
+							}
 						}
-					} else if (turncount > 2 && deck.length > 0) {
-						addToDraw(deck[0])
-						deck.splice(0,1)
+					} else if (turncount > 2 && mydeck.length > 0) {
+						addToDraw(mydeck[0])
+						mydeck.splice(0,1)
 					}
 					if (GET.offline) {
 						if (inIframe) window.parent.document.getElementById("ifr").style.visibility = "visible"
@@ -197,6 +163,10 @@
 					case 4:
 						animData["attack"+aid] = {"time":0,"length":(attackimgs[data.img].width/16)*(1/15),"frame":0,"anim":attackimgs[data.img],"x":data.x,"y":data.y,"w":data.w,"h":data.h,"frame":0,"update":function () {this.frame = Math.floor(this.time/this.length*(this.anim.width/16))}}
 						aid++
+						break;
+					case 5:
+						myUnits[data.unit].x = data.x
+						myUnits[data.unit].y = data.y
 						break;
 				}
 			}
@@ -260,8 +230,9 @@
 					for (let i=0;i<10;i++) {
 						for (let j=0;j<8;j++) {
 							const pa = Math.abs(i-4.5) < 3
-							ctx.fillStyle = "hsl("+(i<=1 ? 220 : 0)+" "+(pa ? 0 : 100)+" "+((i+j)%2==0 ? (pa ? 0 : 25) : (pa ? 100 : 50))+")"
-							ctx.fillRect(i*100+50,j*100,100,100)
+							//ctx.fillStyle = "hsl("+(i<=1 ? 220 : 0)+" "+(pa ? 0 : 100)+" "+((i+j)%2==0 ? (pa ? 0 : 25) : (pa ? 100 : 50))+")"
+							//ctx.fillRect(i*100+50,j*100,100,100)
+							ctx.drawImage(bgimgs[(i+j)%2+(i <= 1)*2+(i >= 8)*4],i*100+50,j*100,100,100)
 						}
 					}
 					for (let [key,value] of Object.entries(animData)) {
@@ -435,10 +406,11 @@
 			let attacks = []
 			let state = 0
 			let gloop
-			let deck = [6,4,4,4,4]
 			let turncount = 0
 			let aid = 0
-			shuffle(deck)
+			const orth = [[1,0],[0,1],[-1,0],[0,-1]]
+			let mydeck = inIframe ? deck2 : deck
+			shuffle(mydeck)
 			let clickable = [{"x":1250,"y":600,"w":100,"h":100,"state":true,"onclick":function () {this.state = !this.state}},{"x":1050,"y":700,"w":300,"h":100,"onclick":function() {if (turn && myUnits.some(u => u.type == 0)) {sendData("turn");turn = false;sel=undefined;seltype=undefined;} else if (turn) {alert("Place your villager first")}}},{"x":50,"y":0,"w":1000,"h":800,"onclick":function(off) {
 				const roff = {"x":Math.floor(off.x/100),"y":Math.floor(off.y/100)}
 				if (turn) {
@@ -456,7 +428,7 @@
 							}
 							break;
 						case (undefined):
-							const found = myUnits.findIndex(u => u.x == roff.x && u.y == roff.y && (((u.moved == 1 || units[u.type].move.nofree) && mana > 0) || (u.moved == 0 && !units[u.type].move.nofree)))
+							const found = myUnits.findIndex(u => u.moved < 2 && u.x == roff.x && u.y == roff.y && (((u.moved == 1 || units[u.type].move.nofree) && mana > 0) || (u.moved == 0 && !units[u.type].move.nofree)))
 							if (found != -1) {
 								sel = found
 								seltype = 1
@@ -474,14 +446,14 @@
 										if (typeof at == "object") {
 											switch (at.style) {
 												case (0):
-													processMove(un,unit,true)
+													processMove(un,unit,true,at)
 													break;
 												case (1):
 													voff = Math.floor(at.set.length/2)+(at.offset ?? [0,0])[1]
 													at.set.forEach((e,ee) => {
 														hoff = Math.floor(e.length/2)+(at.offset ?? [0,0])[0]
 														e.forEach((r,rr) => {
-															if (r && enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) attacks.push({"x":(un.x-hoff+rr),"y":(un.y-voff+ee),"ffire":at.ffire,"goto":at.goto})
+															if (r && enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) attacks.push({"x":(un.x-hoff+rr),"y":(un.y-voff+ee),"ffire":at.ffire,"goto":at.goto,"img":at.img})
 														})
 													})
 													break;
@@ -489,7 +461,7 @@
 													hoff = Math.floor(at.size[0]/2)
 													voff = Math.floor(at.size[1]/2)
 													const gof = (at.offset ?? [0,0])
-													if (enemUnits.some(u => Math.abs(u.x-un.x-gof[0]) <= hoff && Math.abs(u.y-un.y-gof[1]) <= voff)) attacks.push({"x":(un.x-hoff)+gof[0],"y":(un.y-voff)+gof[1],"pierce":true,"w":at.size[0],"h":at.size[1],"ffire":at.ffire,"goto":at.goto})
+													if (enemUnits.some(u => Math.abs(u.x-un.x-gof[0]) <= hoff && Math.abs(u.y-un.y-gof[1]) <= voff)) attacks.push({"x":(un.x-hoff)+gof[0],"y":(un.y-voff)+gof[1],"pierce":true,"w":at.size[0],"h":at.size[1],"ffire":at.ffire,"goto":at.goto,"img":at.img})
 													break;
 												case (3):
 													voff = Math.floor(at.set.length/2)+(at.offset ?? [0,0])[1]
@@ -497,12 +469,24 @@
 													at.set.forEach((e,ee) => {
 														hoff = Math.floor(e.length/2)+(at.offset ?? [0,0])[0]
 														e.forEach((r,rr) => {
-															if (r) co.push({"x":un.x-hoff+rr,"y":un.y-voff+ee,"ffire":at.ffire,"goto":at.goto})
+															if (r) co.push({"x":un.x-hoff+rr,"y":un.y-voff+ee,"ffire":at.ffire,"goto":at.goto,"img":at.img})
 														})
 													})
 													const ws = co.map(a => a.x)
 													const hs = co.map(a => a.y)
-													if (enemUnits.some(u => co.some(c => c.x==u.x && c.y==u.y))) attacks.push({"x":(un.x-hoff),"y":(un.y-voff),"pierce":true,"set":co,"w":1+Math.max(...ws)-Math.min(...ws),"h":1+Math.max(...hs)-Math.min(...hs),"ffire":at.ffire,"goto":at.goto})
+													if (enemUnits.some(u => co.some(c => c.x==u.x && c.y==u.y))) attacks.push({"x":(un.x-hoff),"y":(un.y-voff),"pierce":true,"set":co,"w":1+Math.max(...ws)-Math.min(...ws),"h":1+Math.max(...hs)-Math.min(...hs),"ffire":at.ffire,"goto":at.goto,"img":at.img})
+													break;
+												case (4):
+													orth.forEach((e) => {
+														let i = 1
+														let target1
+														let target2
+														while (!(target = enemUnits.find(u => u.x==un.x+e[0]*i && u.y==un.y+e[1]*i)) && !(target2 = myUnits.find(u => u.x==un.x+e[0]*i && u.y==un.y+e[1]*i)) && Math.abs(un.x+e[0]*i-5.5) <= 5.5 && Math.abs(un.y+e[1]*i-4.5) <= 4.5) {
+															i++
+														}
+														const tar = target ?? target2
+														if (tar) attacks.push({"x":tar.x,"y":tar.y,"dmg":false,"dir":e,...at})
+													})
 													break;
 											}
 										}
@@ -531,9 +515,9 @@
 									mana--
 									let i = 0
 									let target
-									if (units[un.type].attack.img) {
-										animData["attack"+aid] = {"time":0,"length":(attackimgs[units[un.type].attack.img].width/16)*(1/15),"frame":0,"anim":attackimgs[units[un.type].attack.img],"x":attack.x,"y":attack.y,"w":(attack.w ?? 1),"h":(attack.h ?? 1),"frame":0,"update":function () {this.frame = Math.floor(this.time/this.length*(this.anim.width/16))}}
-										sendData({"dataType":4,"x":attack.x,"y":attack.y,"w":(attack.w ?? 1),"h":(attack.h ?? 1),"img":units[un.type].attack.img})
+									if (attack.img) {
+										animData["attack"+aid] = {"time":0,"length":(attackimgs[attack.img].width/16)*(1/15),"frame":0,"anim":attackimgs[attack.img],"x":attack.x,"y":attack.y,"w":(attack.w ?? 1),"h":(attack.h ?? 1),"frame":0,"update":function () {this.frame = Math.floor(this.time/this.length*(this.anim.width/16))}}
+										sendData({"dataType":4,"x":attack.x,"y":attack.y,"w":(attack.w ?? 1),"h":(attack.h ?? 1),"img":attack.img})
 										aid++
 									}
 									if (attack.set) {
@@ -564,12 +548,20 @@
 										let pta2 = attack.ffire ? myUnits.findIndex(u => Math.abs(u.x-attack.x-Math.floor(attack.w/2)) <= ((attack.w ?? 1) ?? 1)/2 && Math.abs(attack.y-u.y+Math.floor((attack.h ?? 1)/2)) <= (attack.h/2 ?? 1)) : -1
 										while ((i==0 || attack.pierce) && (pta >= 0 || pta2 >= 0)) {
 											target = pta >= 0 ? pta : pta2
-											const eff = units[(pta >= 0 ? enemUnits : myUnits)[target].type].death
-											const min = pta < 0
-											procSpec(eff,min);
-											(pta >= 0 ? enemUnits : myUnits).splice(target,1)
-											if (pta >= 0) sendData({"dataType":2,"unit":target})
-											else sendData({"dataType":3,"unit":target})
+											if (attack.dmg ?? true) {
+												const eff = units[(pta >= 0 ? enemUnits : myUnits)[target].type].death
+												const min = pta < 0
+												procSpec(eff,min);
+												(pta >= 0 ? enemUnits : myUnits).splice(target,1)
+												if (pta >= 0) sendData({"dataType":2,"unit":target})
+												else sendData({"dataType":3,"unit":target})
+											}
+											if (attack.pull) {
+												(pta >= 0 ? enemUnits : myUnits)[target].x -= attack.dir[0]*attack.pull;
+												(pta >= 0 ? enemUnits : myUnits)[target].y -= attack.dir[1]*attack.pull;
+												if (pta >= 0) sendData({"dataType":5,"unit":target,"x":enemUnits[target].x,"y":enemUnits[target].y})
+												else sendData({"dataType":1,"unit":target,"x":myUnits[target].x,"y":myUnits[target].y})
+											}
 											if (attack.goto && sel != undefined) {
 												un.x = attack.x
 												un.y = attack.y
@@ -598,7 +590,7 @@
 				clickable.push({"x":1050+Math.floor(i/6)*100,"y":100*(i%6),"w":100,"h":100,"onclick":function () {selFromDraw(this.pos)},"pos":i})
 			}
 			
-			function processMove(un,unit,att) {
+			function processMove(un,unit,att,at) {
 				switch (unit.move.style) {
 					case (1):
 						unit = JSON.parse(JSON.stringify(unit))
@@ -614,7 +606,7 @@
 							const hoff = Math.floor(e.length/2)+(unit.move.offset ?? [0,0])[0]
 							e.forEach((r,rr) => {
 								//out.insertAdjacentHTML("beforeend",att+","+enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)+": "+(att == enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)))
-								if (r && (att == enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) (att ? attacks : movements).push({"x":(un.x-hoff+rr),"y":(un.y-voff+ee)})
+								if (r && (att == enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) (att ? attacks : movements).push({"x":(un.x-hoff+rr),"y":(un.y-voff+ee),"img": att ? at.img : undefined})
 							})
 						})
 						break;
