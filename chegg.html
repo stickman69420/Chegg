@@ -62,7 +62,7 @@
 							ctx.textBaseline = "top"
 							ctx.textAlign = "center"
 							ctx.font = "100px Arial"
-							ctx.fillText(!mine ? "YOU WON YIPPEE" : "You lost",1250/2,0)
+							ctx.fillText(!mine ? "YOU WON YIPPEE" : "You lost",1350/2,0)
 							break;
 					}
 				}
@@ -297,6 +297,7 @@
 						ctx.fillStyle = "#F007"
 						ctx.strokeStyle = "#FF0"
 						attacks.forEach((e) => {
+							if (e.colOver) ctx.fillStyle = e.colOver
 							if (e.set) {
 								e.set.forEach((r) => {
 									if (r.x >= 0 && r.x <= 9) {
@@ -318,6 +319,7 @@
 									ctx.strokeRect(e.x*100+50,e.y*100,(e.w ?? 1)*100,(e.h ?? 1)*100)
 								}
 							}
+							if (e.colOver) ctx.fillStyle = "#F007"
 						})
 						/*const un = myUnits[sel]
 						const unit = units[un.type]
@@ -416,7 +418,8 @@
 				if (turn) {
 					switch (seltype) {
 						case (0):
-							if (sel != undefined && mana >= (units[draw[sel]].cost ?? 0) && ((pid == 0 && roff.x >= 8) || (pid == 1 && roff.x <= 1)) && !enemUnits.some(u => u.x==roff.x && u.y==roff.y) && !myUnits.some(u => u.x==roff.x && u.y==roff.y)) {
+							const rules = units[draw[sel]].placeRule
+							if (sel != undefined && (!rules || rules.colour == undefined || (roff.x+roff.y)%2 == rules.colour) && mana >= (units[draw[sel]].cost ?? 0) && ((pid == 0 && roff.x >= 8) || (pid == 1 && roff.x <= 1)) && !enemUnits.some(u => u.x==roff.x && u.y==roff.y) && !myUnits.some(u => u.x==roff.x && u.y==roff.y)) {
 								const newunit = {"x":roff.x,"y":roff.y,"type":draw[sel],"moved":2};
 								mana -= (units[newunit.type].cost ?? 0)
 								myUnits.push(newunit);
@@ -428,7 +431,7 @@
 							}
 							break;
 						case (undefined):
-							const found = myUnits.findIndex(u => u.moved < 2 && u.x == roff.x && u.y == roff.y && (((u.moved == 1 || units[u.type].move.nofree) && mana > 0) || (u.moved == 0 && !units[u.type].move.nofree)))
+							const found = myUnits.findIndex(u => u.moved < 2 && u.x == roff.x && u.y == roff.y && (((u.moved == 1 || (units[u.type].move ?? {}).nofree) && mana > 0) || (u.moved == 0 && !(units[u.type].move ?? {}).nofree)))
 							if (found != -1) {
 								sel = found
 								seltype = 1
@@ -453,7 +456,7 @@
 													at.set.forEach((e,ee) => {
 														hoff = Math.floor(e.length/2)+(at.offset ?? [0,0])[0]
 														e.forEach((r,rr) => {
-															if (r && enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) attacks.push({"x":(un.x-hoff+rr),"y":(un.y-voff+ee),"ffire":at.ffire,"goto":at.goto,"img":at.img})
+															if (r && enemUnits.some(u => (!units[u.type].lose || !at.nolose) && u.x == un.x-hoff+rr && u.y == un.y-voff+ee) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) attacks.push({"x":(un.x-hoff+rr),"y":(un.y-voff+ee),"ffire":at.ffire,"goto":at.goto,"img":at.img})
 														})
 													})
 													break;
@@ -461,7 +464,7 @@
 													hoff = Math.floor(at.size[0]/2)
 													voff = Math.floor(at.size[1]/2)
 													const gof = (at.offset ?? [0,0])
-													if (enemUnits.some(u => Math.abs(u.x-un.x-gof[0]) <= hoff && Math.abs(u.y-un.y-gof[1]) <= voff)) attacks.push({"x":(un.x-hoff)+gof[0],"y":(un.y-voff)+gof[1],"pierce":true,"w":at.size[0],"h":at.size[1],"ffire":at.ffire,"goto":at.goto,"img":at.img})
+													if (enemUnits.some(u => (!units[u.type].lose || !at.nolose) && Math.abs(u.x-un.x-gof[0]) <= hoff && Math.abs(u.y-un.y-gof[1]) <= voff)) attacks.push({"x":(un.x-hoff)+gof[0],"y":(un.y-voff)+gof[1],"pierce":true,"w":at.size[0],"h":at.size[1],"ffire":at.ffire,"goto":at.goto,"img":at.img})
 													break;
 												case (3):
 													voff = Math.floor(at.set.length/2)+(at.offset ?? [0,0])[1]
@@ -474,14 +477,14 @@
 													})
 													const ws = co.map(a => a.x)
 													const hs = co.map(a => a.y)
-													if (enemUnits.some(u => co.some(c => c.x==u.x && c.y==u.y))) attacks.push({"x":(un.x-hoff),"y":(un.y-voff),"pierce":true,"set":co,"w":1+Math.max(...ws)-Math.min(...ws),"h":1+Math.max(...hs)-Math.min(...hs),"ffire":at.ffire,"goto":at.goto,"img":at.img})
+													if (enemUnits.some(u => (!units[u.type].lose || !at.nolose) && co.some(c => c.x==u.x && c.y==u.y))) attacks.push({"x":(un.x-hoff),"y":(un.y-voff),"pierce":true,"set":co,"w":1+Math.max(...ws)-Math.min(...ws),"h":1+Math.max(...hs)-Math.min(...hs),"ffire":at.ffire,"goto":at.goto,"img":at.img})
 													break;
 												case (4):
 													orth.forEach((e) => {
 														let i = 1
 														let target1
 														let target2
-														while (!(target = enemUnits.find(u => u.x==un.x+e[0]*i && u.y==un.y+e[1]*i)) && !(target2 = myUnits.find(u => u.x==un.x+e[0]*i && u.y==un.y+e[1]*i)) && Math.abs(un.x+e[0]*i-5.5) <= 5.5 && Math.abs(un.y+e[1]*i-4.5) <= 4.5) {
+														while (!(target = enemUnits.find(u => (!units[u.type].lose || !at.nolose) && u.x==un.x+e[0]*i && u.y==un.y+e[1]*i)) && (!at.ffire || !(target2 = myUnits.find(u => (!units[u.type].lose || !at.nolose) && u.x==un.x+e[0]*i && u.y==un.y+e[1]*i))) && Math.abs(un.x+e[0]*i-5.5) <= 5.5 && Math.abs(un.y+e[1]*i-4.5) <= 4.5) {
 															i++
 														}
 														const tar = target ?? target2
@@ -496,8 +499,10 @@
 							break;
 						case (1):
 							let move
-							let attack = attacks.find(m => (!m.set && Math.abs(m.x-roff.x+Math.floor((m.w ?? 1)/2) <= (m.w/2 || 0.5) && Math.abs(m.y-roff.y+Math.floor((m.h ?? 1)/2)) <= (m.h/2 || 0.5)) || (m.set && m.set.some(c => c.x==roff.x && c.y==roff.y))))
-							if ((move = movements.find(m => m.x==roff.x && m.y==roff.y)) && (!attack || clickable[0].state)) {
+							let attack2 = attacks.find(m => m.movePrio && ((!m.set && ((Math.abs(m.x-roff.x+Math.floor((m.w ?? 1)/2)) <= (m.w/2 || 0.5) && (Math.abs(m.y-roff.y+Math.floor((m.h ?? 1)/2))) <= (m.h/2 || 0.5))) || (m.set && m.set.some(c => c.x==roff.x && c.y==roff.y)))))
+							let attack3 = attacks.find(m => !m.movePrio && ((!m.set && ((Math.abs(m.x-roff.x+Math.floor((m.w ?? 1)/2)) <= (m.w/2 || 0.5) && (Math.abs(m.y-roff.y+Math.floor((m.h ?? 1)/2))) <= (m.h/2 || 0.5))) || (m.set && m.set.some(c => c.x==roff.x && c.y==roff.y)))))
+							let attack = clickable[0].state ? (attack2 ?? attack3) : (attack3 ?? attack2)
+							if ((move = movements.find(m => m.x==roff.x && m.y==roff.y)) && (!attack || (clickable[0].state && !attack.movePrio))) {
 								const un = myUnits[sel]
 								if (un.moved == 1 || units[un.type].move.nofree) mana--
 								un.x = move.x
@@ -562,7 +567,13 @@
 												if (pta >= 0) sendData({"dataType":5,"unit":target,"x":enemUnits[target].x,"y":enemUnits[target].y})
 												else sendData({"dataType":1,"unit":target,"x":myUnits[target].x,"y":myUnits[target].y})
 											}
-											if (attack.goto && sel != undefined) {
+											if (attack.swap && sel != undefined && i==0) {
+												(pta >= 0 ? enemUnits : myUnits)[target].x = un.x;
+												(pta >= 0 ? enemUnits : myUnits)[target].y = un.y;
+												if (pta >= 0) sendData({"dataType":5,"unit":target,"x":enemUnits[target].x,"y":enemUnits[target].y})
+												else sendData({"dataType":1,"unit":target,"x":myUnits[target].x,"y":myUnits[target].y})
+											}
+											if ((attack.goto || attack.swap) && sel != undefined && i==0) {
 												un.x = attack.x
 												un.y = attack.y
 												sendData({"dataType":1,"unit":sel,"x":un.x,"y":un.y})

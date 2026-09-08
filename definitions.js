@@ -9,7 +9,7 @@ function imagesLoaded() {
 	allDone()
 }
 
-const unitnames = ["villager","zombie","creeper","pig","rabbit","pufferfish","iron_golem","frog","skeleton","blaze"]
+const unitnames = ["villager","zombie","creeper","pig","rabbit","pufferfish","iron_golem","frog","skeleton","blaze","phantom","enderman"]
 let loadedc = 0
 let loaded = false
 let units = []
