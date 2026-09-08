@@ -13,5 +13,8 @@
 	},
 	"attack": {
 		"style": 0
+	},
+	"placeRule": {
+		"colour": 0
 	}
 }

@@ -1,0 +1,22 @@
+{
+	"img": "enderman",
+	"cost": 4,
+	"attack": [
+		{
+			"style": 1,
+			"set": [
+				[true,true,true],
+				[true,false,true],
+				[true,true,true]
+			]
+		},
+		{
+			"style": 4,
+			"swap": true,
+			"colOver": "#0F07",
+			"ffire": true,
+			"movePrio": true,
+			"nolose": true
+		}
+	]
+}

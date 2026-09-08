@@ -13,6 +13,7 @@
 	},
 	"attack": {
 		"pull": 2,
-		"style": 4
+		"style": 4,
+		"ffire": true
 	}
 }
