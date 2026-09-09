@@ -1,0 +1,17 @@
+{
+	"img": "parrot",
+	"cost": 4,
+	"move": {
+		"style": 0,
+		"set": [
+			[true,false,true,false,true],
+			[true,true,true],
+			[true,true,false,true,true],
+			[true,true,true],
+			[true,false,true,false,true]
+		]
+	},
+	"attack": {
+		"style": "I don't wanna do this"
+	}
+}

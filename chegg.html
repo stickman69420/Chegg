@@ -64,6 +64,15 @@
 							ctx.font = "100px Arial"
 							ctx.fillText(!mine ? "YOU WON YIPPEE" : "You lost",1350/2,0)
 							break;
+						case ("mana"):
+							if (mine) mana += value
+							break;
+						case ("drawOp"):
+							if (mine) sendData({"dataType":6,"count":value})
+							break;
+						case ("discard"):
+							if (mine) draw.splice(0,value)
+							break;
 					}
 				}
 			}
@@ -90,7 +99,7 @@
 				},1000)
 			}
 			
-			const attacknames = ["slash","explosion","spike","sweepu","sweepd","sweepl","sweepr"]
+			const attacknames = ["slash","explosion","spike","sweep","arrow","fire"]
 			const bgimgnames = ["black","white","blue","lblue","red","lred"]
 			const maxload = unitnames.length*2+attacknames.length+bgimgnames.length
 			loadUnits()
@@ -143,6 +152,9 @@
 						if (inIframe) window.parent.document.getElementById("ifr").style.visibility = "visible"
 						else ifr.style.visibility = "hidden"
 					}
+					myUnits.forEach((e) => {
+						if (units[e.type].turn) procSpec(units[e.type].turn,true)
+					})
 				}
 				switch (data.dataType) {
 					case 0:
@@ -161,12 +173,23 @@
 						enemUnits.splice(data.unit,1)
 						break;
 					case 4:
-						animData["attack"+aid] = {"time":0,"length":(attackimgs[data.img].width/16)*(1/15),"frame":0,"anim":attackimgs[data.img],"x":data.x,"y":data.y,"w":data.w,"h":data.h,"frame":0,"update":function () {this.frame = Math.floor(this.time/this.length*(this.anim.width/16))}}
+						animData["attack"+aid] = {"time":0,"length":(attackimgs[data.img].width/16)*(1/15),"frame":0,"anim":attackimgs[data.img],"x":data.x,"sx":data.x,"sy":data.y,"ox":data.ox,"oy":data.oy,"rot2":data.rot,"y":data.y,"w":data.w,"h":data.h,"frame":0,"update":function () {this.frame = Math.floor(this.time/this.length*(this.anim.width/16));this.x=this.ox+(this.sx-this.ox)/this.length*this.time;this.y=this.oy+(this.sy-this.oy)/this.length*this.time;if (this.rot2 === true) {this.rot = Math.atan2(this.sy-this.oy,this.sx-this.ox)} else {this.rot = this.rot2}}}
 						aid++
 						break;
 					case 5:
 						myUnits[data.unit].x = data.x
 						myUnits[data.unit].y = data.y
+						break;
+					case 6:
+						for (let i=0;i<data.count;i++) {
+							if (mydeck.length > 0) {
+								sendData({"dataType":7,"type":mydeck[0]})
+								mydeck.splice(0,1)
+							}
+						}
+						break;
+					case 7:
+						addToDraw(data.type)
 						break;
 				}
 			}
@@ -257,6 +280,8 @@
 					ctx.strokeStyle = "#AAA"
 					ctx.strokeRect(0,800-(manamax*800/6),50,manamax*800/6)
 					ctx.lineWidth = 1
+					ctx.fillStyle = "#000"
+					if (mana > 6) ctx.fillText("+"+(mana-6),25,750)
 					ctx.fillStyle = turn ? (myUnits.some(u => u.type == 0) ? "#FA0" : "#AAA") : "#A00"
 					ctx.fillRect(1050,700,300,100)
 					ctx.fillStyle = "#000"
@@ -344,12 +369,21 @@
 					enemUnits.forEach((e) => {
 						ctx.drawImage(unitimgs[e.type],-100-100*e.x,-100-100*e.y,100,100)
 					})
-					ctx.setTransform(1,0,0,1,0,0)
+					out.innerHTML = JSON.stringify(animData)
 					for (let [key,value] of Object.entries(animData)) {
 						if (key.includes("attack")) {
-							ctx.drawImage(value.anim,value.frame*16,0,16,16,value.x*100+50,value.y*100,value.w*100,value.h*100)
+							ctx.setTransform(1,0,0,1,value.x*100+50+value.w*50,value.y*100+value.h*50)
+							let newwidth = value.w
+							let newheight = value.h
+							if (value.rot) {
+								ctx.rotate(value.rot)
+								newwidth = value.w*Math.cos(value.rot)+value.h*Math.sin(value.rot)
+								newheight = value.h*Math.cos(value.rot)+value.w*Math.sin(value.rot)
+							}
+							ctx.drawImage(value.anim,value.frame*16,0,16,16,-newwidth*50,-newheight*50,newwidth*100,newheight*100)
 						}
 					}
+					ctx.setTransform(1,0,0,1,0,0)
 					ctx.fillStyle = "#FFF"
 					ctx.textAlign = "left"
 					if (ping) ctx.fillText("ping: "+ping+"ms",0,0)
@@ -456,7 +490,7 @@
 													at.set.forEach((e,ee) => {
 														hoff = Math.floor(e.length/2)+(at.offset ?? [0,0])[0]
 														e.forEach((r,rr) => {
-															if (r && enemUnits.some(u => (!units[u.type].lose || !at.nolose) && u.x == un.x-hoff+rr && u.y == un.y-voff+ee) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) attacks.push({"x":(un.x-hoff+rr),"y":(un.y-voff+ee),"ffire":at.ffire,"goto":at.goto,"img":at.img})
+															if (r && enemUnits.some(u => (!(units[u.type].death ?? {}).lose || !at.nolose) && u.x == un.x-hoff+rr && u.y == un.y-voff+ee) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) attacks.push({"x":(un.x-hoff+rr),"y":(un.y-voff+ee),...at,"set":undefined})
 														})
 													})
 													break;
@@ -464,32 +498,43 @@
 													hoff = Math.floor(at.size[0]/2)
 													voff = Math.floor(at.size[1]/2)
 													const gof = (at.offset ?? [0,0])
-													if (enemUnits.some(u => (!units[u.type].lose || !at.nolose) && Math.abs(u.x-un.x-gof[0]) <= hoff && Math.abs(u.y-un.y-gof[1]) <= voff)) attacks.push({"x":(un.x-hoff)+gof[0],"y":(un.y-voff)+gof[1],"pierce":true,"w":at.size[0],"h":at.size[1],"ffire":at.ffire,"goto":at.goto,"img":at.img})
+													if (enemUnits.some(u => (!(units[u.type].death ?? {}).lose || !at.nolose) && Math.abs(u.x-un.x-gof[0]) <= hoff && Math.abs(u.y-un.y-gof[1]) <= voff)) attacks.push({"x":(un.x-hoff)+gof[0],"y":(un.y-voff)+gof[1],"pierce":true,"w":at.size[0],"h":at.size[1],...at,"set":undefined})
 													break;
 												case (3):
-													voff = Math.floor(at.set.length/2)+(at.offset ?? [0,0])[1]
+													voff = Math.floor(at.set.length/2)-(at.offset ?? [0,0])[1]
 													let co = []
 													at.set.forEach((e,ee) => {
-														hoff = Math.floor(e.length/2)+(at.offset ?? [0,0])[0]
+														hoff = Math.floor(e.length/2)-(at.offset ?? [0,0])[0]
 														e.forEach((r,rr) => {
-															if (r) co.push({"x":un.x-hoff+rr,"y":un.y-voff+ee,"ffire":at.ffire,"goto":at.goto,"img":at.img})
+															if (r) co.push({"x":un.x-hoff+rr,"y":un.y-voff+ee})
 														})
 													})
 													const ws = co.map(a => a.x)
 													const hs = co.map(a => a.y)
-													if (enemUnits.some(u => (!units[u.type].lose || !at.nolose) && co.some(c => c.x==u.x && c.y==u.y))) attacks.push({"x":(un.x-hoff),"y":(un.y-voff),"pierce":true,"set":co,"w":1+Math.max(...ws)-Math.min(...ws),"h":1+Math.max(...hs)-Math.min(...hs),"ffire":at.ffire,"goto":at.goto,"img":at.img})
+													if (enemUnits.some(u => (!(units[u.type].death ?? {}).lose || !at.nolose) && co.some(c => c.x==u.x && c.y==u.y))) attacks.push({"x":(un.x-hoff),"y":(un.y-voff),"pierce":true,"w":1+Math.max(...ws)-Math.min(...ws),"h":1+Math.max(...hs)-Math.min(...hs),...at,"set":co})
 													break;
 												case (4):
 													orth.forEach((e) => {
 														let i = 1
 														let target1
 														let target2
-														while (!(target = enemUnits.find(u => (!units[u.type].lose || !at.nolose) && u.x==un.x+e[0]*i && u.y==un.y+e[1]*i)) && (!at.ffire || !(target2 = myUnits.find(u => (!units[u.type].lose || !at.nolose) && u.x==un.x+e[0]*i && u.y==un.y+e[1]*i))) && Math.abs(un.x+e[0]*i-5.5) <= 5.5 && Math.abs(un.y+e[1]*i-4.5) <= 4.5) {
+														while (!(target = enemUnits.find(u => (!(units[u.type].death ?? {}).lose || !at.nolose) && u.x==un.x+e[0]*i && u.y==un.y+e[1]*i)) && (!at.ffire || !(target2 = myUnits.find(u => (!(units[u.type].death ?? {}).lose || !at.nolose) && u.x==un.x+e[0]*i && u.y==un.y+e[1]*i))) && Math.abs(un.x+e[0]*i-5.5) <= 5.5 && Math.abs(un.y+e[1]*i-4.5) <= 4.5) {
 															i++
 														}
 														const tar = target ?? target2
 														if (tar) attacks.push({"x":tar.x,"y":tar.y,"dmg":false,"dir":e,...at})
 													})
+													break;
+												case (5):
+													let queue = [...at.path]
+													//alert(JSON.stringify(at))
+													while (queue.length > 0) {
+														const cur2 = queue.splice(0,1)
+														//alert(JSON.stringify(cur))
+														const cur = Array.isArray(cur2) ? cur2[0] : cur2
+														if (enemUnits.some(u => (!(units[u.type].death ?? {}).lose || !at.nolose) && u.x == un.x+cur.offset[0] && u.y == un.y+cur.offset[1])) attacks.push({"x":un.x+cur.offset[0],"y":un.y+cur.offset[1],...at})
+														else if (cur.children && !myUnits.some(u => (!(units[u.type].death ?? {}).lose || !at.nolose) && u.x == un.x+cur.offset[0] && u.y == un.y+cur.offset[1])) queue.push(...cur.children)
+													}
 													break;
 											}
 										}
@@ -520,16 +565,12 @@
 									mana--
 									let i = 0
 									let target
-									if (attack.img) {
-										animData["attack"+aid] = {"time":0,"length":(attackimgs[attack.img].width/16)*(1/15),"frame":0,"anim":attackimgs[attack.img],"x":attack.x,"y":attack.y,"w":(attack.w ?? 1),"h":(attack.h ?? 1),"frame":0,"update":function () {this.frame = Math.floor(this.time/this.length*(this.anim.width/16))}}
-										sendData({"dataType":4,"x":attack.x,"y":attack.y,"w":(attack.w ?? 1),"h":(attack.h ?? 1),"img":attack.img})
-										aid++
-									}
 									if (attack.set) {
 										let pta = enemUnits.findIndex(u => attack.set.some(c => c.x==u.x && c.y==u.y))
 										let pta2 = attack.ffire ? myUnits.findIndex(u => attack.set.some(c => c.x==u.x && c.y==u.y)) : -1
 										while ((i==0 || attack.pierce) && (pta >= 0 || pta2 >= 0)) {
 											target = pta >= 0 ? pta : pta2
+											ttype = pta >= 0
 											const eff = units[(pta >= 0 ? enemUnits : myUnits)[target].type].death
 											const min = pta < 0
 											procSpec(eff,min);
@@ -553,6 +594,7 @@
 										let pta2 = attack.ffire ? myUnits.findIndex(u => Math.abs(u.x-attack.x-Math.floor(attack.w/2)) <= ((attack.w ?? 1) ?? 1)/2 && Math.abs(attack.y-u.y+Math.floor((attack.h ?? 1)/2)) <= (attack.h/2 ?? 1)) : -1
 										while ((i==0 || attack.pierce) && (pta >= 0 || pta2 >= 0)) {
 											target = pta >= 0 ? pta : pta2
+											ttype = pta >= 0
 											if (attack.dmg ?? true) {
 												const eff = units[(pta >= 0 ? enemUnits : myUnits)[target].type].death
 												const min = pta < 0
@@ -586,6 +628,12 @@
 											pta2 = attack.ffire ? myUnits.findIndex(u => Math.abs(u.x-attack.x-Math.floor(attack.w/2)) <= ((attack.w ?? 1) ?? 1)/2 && Math.abs(attack.y-u.y+Math.floor((attack.h ?? 1)/2)) <= (attack.h/2 ?? 1)) : -1
 										}
 									}
+									if (attack.img) {
+										const o = attack.imgmove ? un : attack
+										animData["attack"+aid] = {"time":0,"length":(attackimgs[attack.img].width/16)*(1/15),"frame":0,"anim":attackimgs[attack.img],"x":attack.x,"y":attack.y,"w":(attack.w ?? 1),"h":(attack.h ?? 1),"sx":attack.x,"sy":attack.y,"ox":o.x,"rot2":attack.rot === true ? true : attack.rot*Math.PI/180,"oy":o.y,"update":function () {this.frame = Math.floor(this.time/this.length*(this.anim.width/16));this.x=this.ox+(this.sx-this.ox)/this.length*this.time;this.y=this.oy+(this.sy-this.oy)/this.length*this.time;if (this.rot2 === true) {this.rot = Math.atan2(this.sy-this.oy,this.sx-this.ox)} else {this.rot = this.rot2}}}
+										sendData({"dataType":4,"x":attack.x,"y":attack.y,"w":(attack.w ?? 1),"h":(attack.h ?? 1),"img":attack.img,"ox":o.x,"oy":o.y,"rot":animData["attack"+aid].rot2})
+										aid++
+									}
 								} else {
 									sel = undefined
 									seltype = undefined
@@ -617,7 +665,7 @@
 							const hoff = Math.floor(e.length/2)+(unit.move.offset ?? [0,0])[0]
 							e.forEach((r,rr) => {
 								//out.insertAdjacentHTML("beforeend",att+","+enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)+": "+(att == enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)))
-								if (r && (att == enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) (att ? attacks : movements).push({"x":(un.x-hoff+rr),"y":(un.y-voff+ee),"img": att ? at.img : undefined})
+								if (r && (att == enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) (att ? attacks : movements).push(Object.assign({"x":(un.x-hoff+rr),"y":(un.y-voff+ee)},att ? at : {},{"set": undefined}))
 							})
 						})
 						break;
