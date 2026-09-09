@@ -14,25 +14,28 @@
 			"style": 2,
 			"size": [3,1],
 			"offset": [0,-1],
-			"img": "sweepu"
+			"img": "sweep"
 		},
 		{
 			"style": 2,
 			"size": [3,1],
 			"offset": [0,1],
-			"img": "sweepd"
+			"img": "sweep",
+			"rot": 180
 		},
 		{
 			"style": 2,
 			"size": [1,3],
 			"offset": [-1,0],
-			"img": "sweepl"
+			"img": "sweep",
+			"rot": 270
 		},
 		{
 			"style": 2,
 			"size": [1,3],
 			"offset": [1,0],
-			"img": "sweepr"
+			"img": "sweep",
+			"rot": 90
 		}
 	]
 }

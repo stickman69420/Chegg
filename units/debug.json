@@ -1,0 +1,16 @@
+{
+	"img": "ender_dragon",
+	"move": {
+		"style":0,
+		"set": [
+			[true,true,true,true,true],
+			[true,true,true,true,true],
+			[true,true,false,true,true],
+			[true,true,true,true,true],
+			[true,true,true,true,true]
+		]
+	},
+	"spawn": {
+		"draw": 15
+	}
+}

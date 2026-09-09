@@ -1,0 +1,18 @@
+{
+	"img": "slime",
+	"cost": 4,
+	"move": {
+		"style": 0,
+		"set": [
+			[true,false,true,false,true],
+			[false],
+			[true,false,false,false,true],
+			[false],
+			[true,false,true,false,true]
+		]
+	},
+	"attack": {
+		"style": 0,
+		"goto": true
+	}
+}

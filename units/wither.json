@@ -1,0 +1,146 @@
+{
+	"img": "wither",
+	"cost": 6,
+	"move": {
+		"style": 0,
+		"set": [
+			[true,true,true],
+			[true,false,true],
+			[true,true,true]
+		]
+	},
+	"attack": [
+		{
+			"style": 3,
+			"set": [
+				[false,true,false],
+				[true,true,true],
+				[false,true,false]
+			],
+			"offset": [0,-3],
+			"ffire": true,
+			"img": "explosion"
+		},
+		{
+			"style": 3,
+			"set": [
+				[false,true,false],
+				[true,true,true],
+				[false,true,false]
+			],
+			"offset": [0,-2],
+			"ffire": true,
+			"img": "explosion"
+		},
+		{
+			"style": 3,
+			"set": [
+				[false,true,false],
+				[true,true,true],
+				[false,false,false]
+			],
+			"offset": [0,-1],
+			"ffire": true,
+			"img": "explosion"
+		},
+		{
+			"style": 3,
+			"set": [
+				[false,true,false],
+				[true,true,true],
+				[false,true,false]
+			],
+			"offset": [0,3],
+			"ffire": true,
+			"img": "explosion"
+		},
+		{
+			"style": 3,
+			"set": [
+				[false,true,false],
+				[true,true,true],
+				[false,true,false]
+			],
+			"offset": [0,2],
+			"ffire": true,
+			"img": "explosion"
+		},
+		{
+			"style": 3,
+			"set": [
+				[false,false,false],
+				[true,true,true],
+				[false,true,false]
+			],
+			"offset": [0,1],
+			"ffire": true,
+			"img": "explosion"
+		},
+		{
+			"style": 3,
+			"set": [
+				[false,true,false],
+				[true,true,true],
+				[false,true,false]
+			],
+			"offset": [-3,0],
+			"ffire": true,
+			"img": "explosion"
+		},
+		{
+			"style": 3,
+			"set": [
+				[false,true,false],
+				[true,true,true],
+				[false,true,false]
+			],
+			"offset": [-2,0],
+			"ffire": true,
+			"img": "explosion"
+		},
+		{
+			"style": 3,
+			"set": [
+				[false,true,false],
+				[true,true,false],
+				[false,true,false]
+			],
+			"offset": [-1,0],
+			"ffire": true,
+			"img": "explosion"
+		},
+		{
+			"style": 3,
+			"set": [
+				[false,true,false],
+				[true,true,true],
+				[false,true,false]
+			],
+			"offset": [3,0],
+			"ffire": true,
+			"img": "explosion"
+		},
+		{
+			"style": 3,
+			"set": [
+				[false,true,false],
+				[true,true,true],
+				[false,true,false]
+			],
+			"offset": [2,0],
+			"ffire": true,
+			"img": "explosion"
+		},
+		{
+			"style": 3,
+			"set": [
+				[false,true,false],
+				[false,true,true],
+				[false,true,false]
+			],
+			"offset": [1,0],
+			"ffire": true,
+			"img": "explosion"
+		}
+	]
+}
