@@ -169,6 +169,9 @@
 					myUnits.filter(u => u.moved).forEach((e) => {
 						e.moved = 0
 					})
+					myUnits.forEach((e,ee) => {
+						if (units[e.type].turn) procSpec(units[e.type].turn,true,e)
+					})
 					turncount++
 					if (turncount == 2) {
 						for (let i=0;i<3;i++) {
@@ -197,7 +200,6 @@
 					}
 					if (pid == 0) {
 						myUnits.forEach((e,ee) => {
-							if (units[e.type].turn) procSpec(units[e.type].turn,true,e)
 							const ctile = map[e.y][e.x]
 							let ncm = true
 							orth.forEach((r,rr) => {
@@ -223,7 +225,6 @@
 							}
 						})
 						enemUnits.forEach((e,ee) => {
-							if (units[e.type].turn) procSpec(units[e.type].turn,true,e)
 							const ctile = map[e.y][e.x]
 							let ncm = true
 							orth.forEach((r,rr) => {
