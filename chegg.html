@@ -201,7 +201,7 @@
 							const ctile = map[e.y][e.x]
 							let ncm = true
 							orth.forEach((r,rr) => {
-								if (ncm && e.x+r[0] >= 0 && e.y+r[1] >= 0 && e.y+r[1] < map.length && e.x+r[0] < map[e.y+r[1]].length) {
+								if (!units[e.type].nopis && ncm && e.x+r[0] >= 0 && e.y+r[1] >= 0 && e.y+r[1] < map.length && e.x+r[0] < map[e.y+r[1]].length) {
 									const ttile = map[e.y+r[1]][e.x+r[0]]
 									//alert(JSON.stringify(ttile)+","+((rr+2)%4))
 									if (ttile.pushfront && ttile.rot == (rr+2)%4) {
@@ -216,7 +216,7 @@
 								}
 							})
 							const dir = orth[ctile.rot]
-							if (ncm && ctile.push && !myUnits.some(u => u.x==e.x+dir[0] && u.y==e.y+dir[1]) && !enemUnits.some(u => u.x==e.x+dir[0] && u.y==e.y+dir[1])) {
+							if (!units[e.type].flying && ncm && ctile.push && !myUnits.some(u => u.x==e.x+dir[0] && u.y==e.y+dir[1]) && !enemUnits.some(u => u.x==e.x+dir[0] && u.y==e.y+dir[1])) {
 								e.x += dir[0]
 								e.y += dir[1]
 								sendData({"dataType":1,"unit":ee,"x":e.x,"y":e.y})
@@ -227,7 +227,7 @@
 							const ctile = map[e.y][e.x]
 							let ncm = true
 							orth.forEach((r,rr) => {
-								if (ncm && e.x+r[0] >= 0 && e.y+r[1] >= 0 && e.y+r[1] < map.length && e.x+r[0] < map[e.y+r[1]].length) {
+								if (!units[e.type].nopis && ncm && e.x+r[0] >= 0 && e.y+r[1] >= 0 && e.y+r[1] < map.length && e.x+r[0] < map[e.y+r[1]].length) {
 									const ttile = map[e.y+r[1]][e.x+r[0]]
 									//alert(JSON.stringify(ttile)+","+((rr+2)%4))
 									if (ttile.pushfront && ttile.rot == (rr+2)%4) {
@@ -242,7 +242,7 @@
 								}
 							})
 							const dir = orth[ctile.rot]
-							if (ncm && ctile.push && !myUnits.some(u => u.x==e.x+dir[0] && u.y==e.y+dir[1]) && !enemUnits.some(u => u.x==e.x+dir[0] && u.y==e.y+dir[1])) {
+							if (!units[e.type].flying && ncm && ctile.push && !myUnits.some(u => u.x==e.x+dir[0] && u.y==e.y+dir[1]) && !enemUnits.some(u => u.x==e.x+dir[0] && u.y==e.y+dir[1])) {
 								e.x += dir[0]
 								e.y += dir[1]
 								sendData({"dataType":5,"unit":ee,"x":e.x,"y":e.y})
