@@ -20,5 +20,7 @@
 		],
 		"img": "fire",
 		"imgmove": true
-	}
+	},
+	"fireimm": true,
+	"flying": true
 }

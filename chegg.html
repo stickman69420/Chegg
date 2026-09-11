@@ -40,7 +40,7 @@
 			// Retrieved 2026-09-04, License - CC BY-SA 4.0
 			GET = location.search.substr(1).split("&").reduce((o,i)=>(u=decodeURIComponent,[k,v]=i.split("="),o[u(k)]=v&&u(v),o),{});
 			
-			function procSpec(effect2,mine) {
+			function procSpec(effect2,mine,un) {
 				const effect = (effect2 ?? {})
 				for (const [key,value] of Object.entries(effect)) {
 					switch(key) {
@@ -73,6 +73,37 @@
 						case ("discard"):
 							if (mine) draw.splice(0,value)
 							break;
+						case ("attack"):
+							const voff = Math.floor(value.set.length/2)
+							let hof = 0
+							if (mine) {
+								value.set.forEach((e,ee) => {
+									const hoff = Math.floor(e.length/2)
+									hof = Math.max(hoff,hof)
+									e.forEach((r,rr) => {
+										if (r) {
+											let pta = enemUnits.findIndex(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)
+											let pta2 = value.ffire ? myUnits.findIndex(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee) : -1
+											const target = pta >= 0 ? pta : pta2
+											if (target >= 0) {
+												const tent = (pta >= 0 ? enemUnits : myUnits)[target]
+												const eff = units[tent.type].death
+												const min = pta < 0
+												procSpec(eff,min,tent);
+												(pta >= 0 ? enemUnits : myUnits).splice(target,1)
+												if (pta >= 0) sendData({"dataType":2,"unit":target})
+												else sendData({"dataType":3,"unit":target})
+											}
+										}
+									})
+								})
+								if (value.img) {
+									animData["attack"+aid] = {"time":0,"length":(attackimgs[value.img].width/16)*(1/15),"frame":0,"anim":attackimgs[value.img],"x":un.x-hof,"y":un.y-voff,"w":(value.set[0].length ?? 1),"h":(value.set.length ?? 1),"sx":un.x-hof,"sy":un.y-voff,"ox":un.x-hof,"oy":un.y-voff,"update":function () {this.frame = Math.floor(this.time/this.length*(this.anim.width/16));this.x=this.ox+(this.sx-this.ox)/this.length*this.time;this.y=this.oy+(this.sy-this.oy)/this.length*this.time;if (this.rot2 === true) {this.rot = Math.atan2(this.sy-this.oy,this.sx-this.ox)} else {this.rot = this.rot2}}}
+									sendData({"dataType":4,"x":un.x-hof,"y":un.y-voff,"w":(value.set[0].length ?? 1),"h":(value.set.length ?? 1),"img":value.img,"ox":un.x-hof,"oy":un.y-voff})
+									aid++
+								}
+							}
+							break;
 					}
 				}
 			}
@@ -100,13 +131,15 @@
 			}
 			
 			const attacknames = ["slash","explosion","spike","sweep","arrow","fire"]
-			const bgimgnames = ["black","white","blue","lblue","red","lred"]
+			const bgimgnames = ["black","white","blue","lblue","red","lred","dblue","lapis","resin","shroomlight","piston","conveyor","tntt","tntb","wallt","wallb"]
+			const tsets = [[0,1],[2,3],[4,5],[6,7],[8,9],[10],[11],[12,13],[14,15]]
 			const maxload = unitnames.length*2+attacknames.length+bgimgnames.length
-			loadUnits()
 			let glc = 0
 			let attackimgs = {}
 			let bgimgs = []
-			attacknames.forEach((e) => {
+			
+			loadUnits()
+			attacknames.forEach((e,ee) => {
 				attackimgs[e] = new Image()
 				attackimgs[e].src = "./images/attacks/"+e+".png"
 				attackimgs[e].onload = imageLoaded
@@ -153,8 +186,87 @@
 						else ifr.style.visibility = "hidden"
 					}
 					myUnits.forEach((e) => {
-						if (units[e.type].turn) procSpec(units[e.type].turn,true)
+						if (!validMove(e,myUnits[e.type],e,false)) e.dead = true
 					})
+					let d
+					while (1+(d = myUnits.findIndex(u => u.dead))) {
+						const unit = units[myUnits[d].type]
+						procSpec(unit.death,true,myUnits[d]);
+						sendData({"dataType":3,"unit":d})
+						myUnits.splice(d,1)
+					}
+					if (pid == 0) {
+						myUnits.forEach((e,ee) => {
+							if (units[e.type].turn) procSpec(units[e.type].turn,true,e)
+							const ctile = map[e.y][e.x]
+							let ncm = true
+							orth.forEach((r,rr) => {
+								if (ncm && e.x+r[0] >= 0 && e.y+r[1] >= 0 && e.y+r[1] < map.length && e.x+r[0] < map[e.y+r[1]].length) {
+									const ttile = map[e.y+r[1]][e.x+r[0]]
+									//alert(JSON.stringify(ttile)+","+((rr+2)%4))
+									if (ttile.pushfront && ttile.rot == (rr+2)%4) {
+										const tloc = {"x":e.x-r[0],"y":e.y-r[1]}
+										if (!myUnits.some(u => u.x==tloc.x && u.y==tloc.y) && !enemUnits.some(u => u.x==tloc.x && u.y==tloc.y)) {
+											e.x -= r[0]
+											e.y -= r[1]
+											sendData({"dataType":1,"unit":ee,"x":e.x,"y":e.y})
+											ncm = false
+										}
+									}
+								}
+							})
+							const dir = orth[ctile.rot]
+							if (ncm && ctile.push && !myUnits.some(u => u.x==e.x+dir[0] && u.y==e.y+dir[1]) && !enemUnits.some(u => u.x==e.x+dir[0] && u.y==e.y+dir[1])) {
+								e.x += dir[0]
+								e.y += dir[1]
+								sendData({"dataType":1,"unit":ee,"x":e.x,"y":e.y})
+							}
+						})
+						enemUnits.forEach((e,ee) => {
+							if (units[e.type].turn) procSpec(units[e.type].turn,true,e)
+							const ctile = map[e.y][e.x]
+							let ncm = true
+							orth.forEach((r,rr) => {
+								if (ncm && e.x+r[0] >= 0 && e.y+r[1] >= 0 && e.y+r[1] < map.length && e.x+r[0] < map[e.y+r[1]].length) {
+									const ttile = map[e.y+r[1]][e.x+r[0]]
+									//alert(JSON.stringify(ttile)+","+((rr+2)%4))
+									if (ttile.pushfront && ttile.rot == (rr+2)%4) {
+										const tloc = {"x":e.x-r[0],"y":e.y-r[1]}
+										if (!myUnits.some(u => u.x==tloc.x && u.y==tloc.y) && !enemUnits.some(u => u.x==tloc.x && u.y==tloc.y)) {
+											e.x -= r[0]
+											e.y -= r[1]
+											sendData({"dataType":5,"unit":ee,"x":e.x,"y":e.y})
+											ncm = false
+										}
+									}
+								}
+							})
+							const dir = orth[ctile.rot]
+							if (ncm && ctile.push && !myUnits.some(u => u.x==e.x+dir[0] && u.y==e.y+dir[1]) && !enemUnits.some(u => u.x==e.x+dir[0] && u.y==e.y+dir[1])) {
+								e.x += dir[0]
+								e.y += dir[1]
+								sendData({"dataType":5,"unit":ee,"x":e.x,"y":e.y})
+							}
+						})
+						myUnits.forEach((e) => {
+							if (!validMove(e,myUnits[e.type],e,false)) e.dead = true
+						})
+						while (1+(d = myUnits.findIndex(u => u.dead))) {
+							const unit = units[myUnits[d].type]
+							procSpec(unit.death,true,myUnits[d]);
+							sendData({"dataType":3,"unit":d})
+							myUnits.splice(d,1)
+						}
+						enemUnits.forEach((e) => {
+							if (!validMove(e,enemUnits[e.type],e,false)) e.dead = true
+						})
+						while (1+(d = enemUnits.findIndex(u => u.dead))) {
+							const unit = units[enemUnits[d].type]
+							procSpec(unit.death,true,enemUnits[d]);
+							sendData({"dataType":2,"unit":d})
+							enemUnits.splice(d,1)
+						}
+					}
 				}
 				switch (data.dataType) {
 					case 0:
@@ -165,11 +277,11 @@
 						enemUnits[data.unit].y = data.y
 						break;
 					case 2:
-						procSpec(units[myUnits[data.unit].type].death,true)
+						procSpec(units[myUnits[data.unit].type].death,true,myUnits[data.unit])
 						myUnits.splice(data.unit,1)
 						break;
 					case 3:
-						procSpec(units[enemUnits[data.unit].type].death,false)
+						procSpec(units[enemUnits[data.unit].type].death,false,enemUnits[data.unit])
 						enemUnits.splice(data.unit,1)
 						break;
 					case 4:
@@ -190,6 +302,9 @@
 						break;
 					case 7:
 						addToDraw(data.type)
+						break;
+					case 8:
+						map[data.loc.y][data.loc.x] = data.set
 						break;
 				}
 			}
@@ -243,21 +358,61 @@
 					/*if (document.getElementById("ifr")) out.innerHTML = ifr.contentWindow.receiveData ? ifr.contentWindow.receiveData.toString() : "undefined"
 					else out.innerHTML = "?"*/
 					canvas.style.width = Math.min(100,(100/(canvas.height/canvas.width))*(window.innerHeight/window.innerWidth))+"%"
-					if (!inIframe) {
+					if (!inIframe && GET.offline) {
 						ifr.style.height = canvas.offsetHeight+"px"
 						ifr.style.width = canvas.offsetWidth+"px"
 					}
+					myUnits.forEach((e) => {
+						const ctile = map[e.y][e.x]
+						if (ctile.landmine) {
+							const hoff = Math.floor(ctile.size[0]/2)
+							const voff = Math.floor(ctile.size[1]/2)
+							
+							const targets = myUnits.filter(u => Math.abs(u.x-e.x) <= hoff && Math.abs(u.y-e.y) <= voff)
+							const targets2 = enemUnits.filter(u => Math.abs(u.x-e.x) <= hoff && Math.abs(u.y-e.y) <= voff)
+							
+							animData["attack"+aid] = {"time":0,"length":(attackimgs["explosion"].width/16)*(1/15),"frame":0,"anim":attackimgs["explosion"],"x":e.x-hoff,"y":e.y-voff,"w":ctile.size[0],"h":ctile.size[0],"sx":e.x-hoff,"sy":e.y-voff,"ox":e.x-hoff,"oy":e.y-voff,"update":function () {this.frame = Math.floor(this.time/this.length*(this.anim.width/16));this.x=this.ox+(this.sx-this.ox)/this.length*this.time;this.y=this.oy+(this.sy-this.oy)/this.length*this.time;if (this.rot2 === true) {this.rot = Math.atan2(this.sy-this.oy,this.sx-this.ox)} else {this.rot = this.rot2}}}
+							sendData({"dataType":4,"x":e.x-hoff,"y":e.y-voff,"w":ctile.size[0],"h":ctile.size[1],"img":"explosion","ox":e.x-hoff,"oy":e.y-voff})
+							aid++
+							
+							map[e.y][e.x] = {"type": 0}
+							sendData({"dataType": 8,"loc": e,"set": {"type": 0}})
+							
+							targets.forEach((e) => {
+								const d = myUnits.indexOf(e)
+								const unit = units[e.type]
+								procSpec(unit.death,true,e);
+								sendData({"dataType":3,"unit":d})
+								myUnits.splice(d,1)
+							})
+							targets2.forEach((e) => {
+								const d = enemUnits.indexOf(e)
+								const unit = units[e.type]
+								procSpec(unit.death,true,e);
+								sendData({"dataType":2,"unit":d})
+								enemUnits.splice(d,1)
+							})
+						}
+					})
 					ctx.clearRect(0,0,canvas.width,canvas.height)
 					ctx.textBaseline = "top"
 					ctx.font = "20px Arial"
-					for (let i=0;i<10;i++) {
+					/*for (let i=0;i<10;i++) {
 						for (let j=0;j<8;j++) {
 							const pa = Math.abs(i-4.5) < 3
 							//ctx.fillStyle = "hsl("+(i<=1 ? 220 : 0)+" "+(pa ? 0 : 100)+" "+((i+j)%2==0 ? (pa ? 0 : 25) : (pa ? 100 : 50))+")"
 							//ctx.fillRect(i*100+50,j*100,100,100)
 							ctx.drawImage(bgimgs[(i+j)%2+(i <= 1)*2+(i >= 8)*4],i*100+50,j*100,100,100)
 						}
-					}
+					}*/
+					map.forEach((e,ee) => {
+						e.forEach((r,rr) => {
+							ctx.setTransform(1,0,0,1,rr*100+100,ee*100+50)
+							ctx.rotate((r.rot ?? 0)*Math.PI/2)
+							ctx.drawImage(bgimgs[tsets[r.type][(ee+rr)%tsets[r.type].length]],-50,-50,100,100)
+						})
+					})
+					ctx.setTransform(1,0,0,1,0,0)
 					for (let [key,value] of Object.entries(animData)) {
 						value.time += 0.016
 						if (value.time >= value.length) delete animData[key]
@@ -369,7 +524,6 @@
 					enemUnits.forEach((e) => {
 						ctx.drawImage(unitimgs[e.type],-100-100*e.x,-100-100*e.y,100,100)
 					})
-					out.innerHTML = JSON.stringify(animData)
 					for (let [key,value] of Object.entries(animData)) {
 						if (key.includes("attack")) {
 							ctx.setTransform(1,0,0,1,value.x*100+50+value.w*50,value.y*100+value.h*50)
@@ -444,7 +598,7 @@
 			let gloop
 			let turncount = 0
 			let aid = 0
-			const orth = [[1,0],[0,1],[-1,0],[0,-1]]
+			const orth = [[0,-1],[1,0],[0,1],[-1,0]]
 			let mydeck = inIframe ? deck2 : deck
 			shuffle(mydeck)
 			let clickable = [{"x":1250,"y":600,"w":100,"h":100,"state":true,"onclick":function () {this.state = !this.state}},{"x":1050,"y":700,"w":300,"h":100,"onclick":function() {if (turn && myUnits.some(u => u.type == 0)) {sendData("turn");turn = false;sel=undefined;seltype=undefined;} else if (turn) {alert("Place your villager first")}}},{"x":50,"y":0,"w":1000,"h":800,"onclick":function(off) {
@@ -453,11 +607,11 @@
 					switch (seltype) {
 						case (0):
 							const rules = units[draw[sel]].placeRule
-							if (sel != undefined && (!rules || rules.colour == undefined || (roff.x+roff.y)%2 == rules.colour) && mana >= (units[draw[sel]].cost ?? 0) && ((pid == 0 && roff.x >= 8) || (pid == 1 && roff.x <= 1)) && !enemUnits.some(u => u.x==roff.x && u.y==roff.y) && !myUnits.some(u => u.x==roff.x && u.y==roff.y)) {
+							if (sel != undefined && (!rules || rules.colour == undefined || (roff.x+roff.y)%2 == rules.colour) && mana >= (units[draw[sel]].cost ?? 0) && ((pid == 0 && map[roff.y][roff.x].p1spawn) || (pid == 1 && map[roff.y][roff.x].p2spawn)) && !enemUnits.some(u => u.x==roff.x && u.y==roff.y) && !myUnits.some(u => u.x==roff.x && u.y==roff.y)) {
 								const newunit = {"x":roff.x,"y":roff.y,"type":draw[sel],"moved":2};
 								mana -= (units[newunit.type].cost ?? 0)
 								myUnits.push(newunit);
-								procSpec(units[newunit.type].spawn ?? {},true)
+								procSpec(units[newunit.type].spawn ?? {},true,newunit)
 								sendData({...newunit,"dataType":0});
 								draw.splice(sel,1);
 								sel = undefined;
@@ -490,7 +644,7 @@
 													at.set.forEach((e,ee) => {
 														hoff = Math.floor(e.length/2)+(at.offset ?? [0,0])[0]
 														e.forEach((r,rr) => {
-															if (r && enemUnits.some(u => (!(units[u.type].death ?? {}).lose || !at.nolose) && u.x == un.x-hoff+rr && u.y == un.y-voff+ee) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) attacks.push({"x":(un.x-hoff+rr),"y":(un.y-voff+ee),...at,"set":undefined})
+															if (r && enemUnits.some(u => (!(units[u.type].death ?? {}).lose || !at.nolose) && u.x == un.x-hoff+rr && u.y == un.y-voff+ee) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee) && validMove(un,unit,{"x":un.x-hoff+rr,"y":un.y-voff+ee},true)) attacks.push({"x":(un.x-hoff+rr),"y":(un.y-voff+ee),...at,"set":undefined})
 														})
 													})
 													break;
@@ -522,7 +676,7 @@
 															i++
 														}
 														const tar = target ?? target2
-														if (tar) attacks.push({"x":tar.x,"y":tar.y,"dmg":false,"dir":e,...at})
+														if (tar && validMove(un,unit,tar,true)) attacks.push({"x":tar.x,"y":tar.y,"dmg":false,"dir":e,...at})
 													})
 													break;
 												case (5):
@@ -532,7 +686,7 @@
 														const cur2 = queue.splice(0,1)
 														//alert(JSON.stringify(cur))
 														const cur = Array.isArray(cur2) ? cur2[0] : cur2
-														if (enemUnits.some(u => (!(units[u.type].death ?? {}).lose || !at.nolose) && u.x == un.x+cur.offset[0] && u.y == un.y+cur.offset[1])) attacks.push({"x":un.x+cur.offset[0],"y":un.y+cur.offset[1],...at})
+														if (enemUnits.some(u => (!(units[u.type].death ?? {}).lose || !at.nolose) && u.x == un.x+cur.offset[0] && u.y == un.y+cur.offset[1]) && validMove(un,unit,{"x":un.x+cur.offset[0],"y":un.y+cur.offset[1]},true)) attacks.push({"x":un.x+cur.offset[0],"y":un.y+cur.offset[1],...at})
 														else if (cur.children && !myUnits.some(u => (!(units[u.type].death ?? {}).lose || !at.nolose) && u.x == un.x+cur.offset[0] && u.y == un.y+cur.offset[1])) queue.push(...cur.children)
 													}
 													break;
@@ -553,7 +707,7 @@
 								un.x = move.x
 								un.y = move.y
 								if (move.jumpOver && (enemUnits.some(u => u.x==move.jumpOver[0] && u.y==move.jumpOver[1]) || myUnits.some(u => u.x==move.jumpOver[0] && u.y==move.jumpOver[1]))) {
-									procSpec(units[un.type].jumpOver,true)
+									procSpec(units[un.type].jumpOver,true,un)
 								}
 								sendData({"dataType":1,"unit":sel,"x":un.x,"y":un.y})
 								un.moved++
@@ -571,9 +725,10 @@
 										while ((i==0 || attack.pierce) && (pta >= 0 || pta2 >= 0)) {
 											target = pta >= 0 ? pta : pta2
 											ttype = pta >= 0
-											const eff = units[(pta >= 0 ? enemUnits : myUnits)[target].type].death
+											const tent = (pta >= 0 ? enemUnits : myUnits)[target]
+											const eff = units[tent.type].death
 											const min = pta < 0
-											procSpec(eff,min);
+											procSpec(eff,min,tent);
 											(pta >= 0 ? enemUnits : myUnits).splice(target,1)
 											if (pta >= 0) sendData({"dataType":2,"unit":target})
 											else sendData({"dataType":3,"unit":target})
@@ -596,9 +751,10 @@
 											target = pta >= 0 ? pta : pta2
 											ttype = pta >= 0
 											if (attack.dmg ?? true) {
-												const eff = units[(pta >= 0 ? enemUnits : myUnits)[target].type].death
+												const tent = (pta >= 0 ? enemUnits : myUnits)[target]
+												const eff = units[tent.type].death
 												const min = pta < 0
-												procSpec(eff,min);
+												procSpec(eff,min,tent);
 												(pta >= 0 ? enemUnits : myUnits).splice(target,1)
 												if (pta >= 0) sendData({"dataType":2,"unit":target})
 												else sendData({"dataType":3,"unit":target})
@@ -665,15 +821,22 @@
 							const hoff = Math.floor(e.length/2)+(unit.move.offset ?? [0,0])[0]
 							e.forEach((r,rr) => {
 								//out.insertAdjacentHTML("beforeend",att+","+enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)+": "+(att == enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)))
-								if (r && (att == enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) (att ? attacks : movements).push(Object.assign({"x":(un.x-hoff+rr),"y":(un.y-voff+ee)},att ? at : {},{"set": undefined}))
+								if (r && (att == enemUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee)) && !myUnits.some(u => u.x == un.x-hoff+rr && u.y == un.y-voff+ee) && validMove(un,unit,{"x":un.x-hoff+rr,"y":un.y-voff+ee},att)) (att ? attacks : movements).push(Object.assign({"x":(un.x-hoff+rr),"y":(un.y-voff+ee)},att ? at : {},{"set": undefined}))
 							})
 						})
 						break;
 					case (2):
 						unit.move.set.forEach((e) => {
-							if ((att == enemUnits.some(u => u.x == un.x+e.dest[0] && u.y == un.y+e.dest[1])) && !myUnits.some(u => u.x == un.x+e.dest[0] && u.y == un.y+e.dest[1])) (att ? attacks : movements).push({"x":(un.x+e.dest[0]),"y":(un.y+e.dest[1]),"jumpOver":[e.jumpOver[0]+un.x,e.jumpOver[1]+un.y]})
+							if ((att == enemUnits.some(u => u.x == un.x+e.dest[0] && u.y == un.y+e.dest[1])) && !myUnits.some(u => u.x == un.x+e.dest[0] && u.y == un.y+e.dest[1]) && validMove(un,unit,{"x":un.x+e.dest[0],"y":un.y+e.dest[1]},att)) (att ? attacks : movements).push({"x":(un.x+e.dest[0]),"y":(un.y+e.dest[1]),"jumpOver":[e.jumpOver[0]+un.x,e.jumpOver[1]+un.y]})
 						})
 						break;
+				}
+			}
+			
+			function validMove(un,unit,loc,att) {
+				if (loc.x >= 0 && loc.y >= 0 && loc.y < map.length && loc.x < map[loc.y].length) {
+					const ctile = map[loc.y][loc.x]
+					return (att && !unit.attack.goto) || ((!ctile.water || unit.flying || unit.wet) && (!ctile.lava || unit.flying || unit.fireimm) && (!ctile.wall || unit.flying) && !ctile.fullblock)
 				}
 			}
 			
