@@ -1,0 +1,82 @@
+<!doctype HTML>
+<html>
+	<head>
+		<title>Make a map</title>
+		<script>
+			addEventListener("error", (e) => {
+				alert(e.lineno+":"+e.colno+", "+e.message+"\nMain")
+			});
+		</script>
+		<style>
+			canvas {
+				overflow: hidden;
+				image-rendering: pixelated;
+			}
+		</style>
+	</head>
+	<body style="padding:0px;margin:0px;font-family: Arial">
+		<a style="position:absolute;" href="./index.html">Back to home</a><button style="position:absolute;top:1.5em;" onclick="saveTemplateAsFile('newMap.json',map)">Save</button>
+		<div style="width:100%;height:100%;display:flex;justify-content:center;align-items:center;" id="loadBarDiv"><progress style="width:50%;" id="loadBar" max="1" value="0"></progress></div>
+		<script src="./definitions.js"></script>
+		<script>
+			const bgimgnames = ["black","white","blue","lblue","red","lred","dblue","lapis","resin","shroomlight","piston","conveyor","tntt","tntb","wallt","wallb"]
+			const tsets = [[0,1],[2,3],[4,5],[6,7],[8,9],[10],[11],[12,13],[14,15]]
+			let bgimgs = {}
+			const maxload = bgimgnames.length
+			bgimgnames.forEach((e,ee) => {
+				bgimgs[e] = new Image()
+				bgimgs[e].src = "./images/ui/"+e+".png"
+				bgimgs[e].onload = imageLoaded
+			})
+			let sel
+			const sbutheight = 800/tsets.length
+			const spec = [{},{"p2spawn":true},{"p1spawn":true},{"water": true,"wall": true},{"lava": true},{"rot":0,"wall":true,"pushfront":true},{"rot":0,"push":true},{"landmine": true,"size": [3,3]},{"fullblock": true}]
+			function allDone() {
+				document.body.insertAdjacentHTML("afterbegin","<canvas style='position:absolute;top:0px;left:0px;' id='canvas' width='1200' height='800'></canvas>")
+				ctx = canvas.getContext("2d")
+				ctx.webkitImageSmoothingEnabled = false
+				ctx.mozImageSmoothingEnabled = false
+				ctx.imageSmoothingEnabled = false
+				setInterval(() => {
+					canvas.style.width = Math.min(100,(100/(canvas.height/canvas.width))*(window.innerHeight/window.innerWidth))+"%"
+					ctx.clearRect(0,0,canvas.width,canvas.height)
+					map.forEach((e,ee) => {
+						e.forEach((r,rr) => {
+							ctx.setTransform(1,0,0,1,rr*100+50,ee*100+50)
+							ctx.rotate((r.rot ?? 0)*Math.PI/2)
+							ctx.drawImage(bgimgs[bgimgnames[tsets[r.type][(ee+rr)%tsets[r.type].length]]],-50,-50,100,100)
+							//ctx.fillText(JSON.stringify(r),-50,0)
+						})
+					})
+					ctx.setTransform(1,0,0,1,0,0)
+					ctx.fillStyle = "#FF07"
+					tsets.forEach((e,ee) => {
+						e.forEach((r,rr) => {
+							ctx.drawImage(bgimgs[bgimgnames[r]],1000+rr*sbutheight,ee*sbutheight,sbutheight,sbutheight)
+						})
+						if (sel == ee) ctx.fillRect(1000,ee*sbutheight,200,sbutheight)
+						ctx.strokeRect(1000,ee*sbutheight,200,sbutheight)
+					})
+				},16)
+				canvas.addEventListener("click", function (e) {
+					const loc = {"x":e.offsetX/canvas.offsetWidth*canvas.width,"y":e.offsetY/canvas.offsetHeight*canvas.height}
+					if (sel == undefined) {
+						if (loc.x >= 1000) {
+							const tsel = Math.floor(loc.y/sbutheight)
+							if (loc.y-tsel*sbutheight <= 100) sel = tsel
+						} else {
+							let selled = map[Math.floor(loc.y/100)][Math.floor(loc.x/100)]
+							if (selled.rot != undefined) selled.rot = (selled.rot+1)%4 //= (selled.rot+Math.PI/2)%(Math.PI*2)
+						}
+					} else if (loc.x < 1000) {
+						map[Math.floor(loc.y/100)][Math.floor(loc.x/100)] = {"type":sel,...spec[sel]}
+					} else {
+						const tsel = Math.floor(loc.y/sbutheight)
+						if (tsel == sel) sel = undefined
+						else sel = tsel
+					}
+				})
+			}
+		</script>
+	</body>
+</html>

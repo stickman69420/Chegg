@@ -2,10 +2,41 @@
 <html>
 	<head>
 		<title>Play Chegg online</title>
+		<script>
+			addEventListener("error", (e) => {
+				alert(e.lineno+":"+e.colno+", "+e.message+"\nMain")
+			});
+		</script>
 	</head>
-	<body>
+	<body style="font-family: Arial;">
 		<a href="./chegg.html">Play online</a><br>
 		<a href="./chegg.html?offline=true">Play locally</a><br>
-		<a href="./deckbuild.html">Build your deck</a>
+		<a href="./deckbuild.html">Build your deck</a><br>
+		<a href="./mapbuilder.html">Create a map</a><br>
+		<button onclick="loadS()">Load map</button><button onclick="localStorage.removeItem('map')">Reset map</button>
+		<script src="./definitions.js"></script>
+		<script>
+			function loadS() {
+				// Source - https://stackoverflow.com/a/40971885
+				// Posted by user4602228, modified by community. See post 'Timeline' for change history
+				// Retrieved 2026-07-17, License - CC BY-SA 4.0
+				
+				let input = document.createElement('input');
+				input.type = 'file';
+				input.accept = ".json"
+				input.click();
+				input.addEventListener('change', async (event) => {
+					const file = event.target.files[0]; // Get the first selected file
+					if (!file) return;
+					try {
+						const text = await file.text(); // Read file content as text
+						const mapData = JSON.parse(text)
+						localStorage.setItem("map",JSON.stringify(mapData)) //doing this to remove formatting
+					} catch (error) {
+						alert(error.message)
+					}
+				});
+			}
+		</script>
 	</body>
 </html>
