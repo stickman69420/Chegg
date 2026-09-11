@@ -307,6 +307,9 @@
 					case 8:
 						map[data.loc.y][data.loc.x] = data.set
 						break;
+					case 9:
+						map = data.map
+						break;
 				}
 			}
 			
@@ -339,6 +342,7 @@
 				ctx.mozImageSmoothingEnabled = false
 				ctx.imageSmoothingEnabled = false
 				if (pid == 1) sendData("turn")
+				else sendData({"dataType":9,"map":map})
 				setInterval(() => {
 					if (conn && conn.peerConnection) {
 						conn.peerConnection.getStats().then((r) => {
