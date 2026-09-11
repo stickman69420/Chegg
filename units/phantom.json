@@ -16,5 +16,6 @@
 	},
 	"placeRule": {
 		"colour": 0
-	}
+	},
+	"flying": true
 }

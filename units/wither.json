@@ -1,6 +1,19 @@
 {
 	"img": "wither",
 	"cost": 6,
+	"fireimm": true,
+	"flying": true,
+	"spawn": {
+		"attack": {
+			"img": "explosion",
+			"ffire": true,
+			"set": [
+				[true,true,true],
+				[true,false,true],
+				[true,true,true]
+			]
+		}
+	},
 	"move": {
 		"style": 0,
 		"set": [
