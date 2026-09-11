@@ -12,7 +12,8 @@
 		]
 	},
 	"attack": {
-		"style": 0
+		"style": 0,
+		"goto": true
 	},
 	"placeRule": {
 		"colour": 0
