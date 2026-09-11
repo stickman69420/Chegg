@@ -17,5 +17,6 @@
 	"placeRule": {
 		"colour": 0
 	},
-	"flying": true
+	"flying": true,
+	"nopis": true
 }
