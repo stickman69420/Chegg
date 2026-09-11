@@ -189,7 +189,7 @@
 						else ifr.style.visibility = "hidden"
 					}
 					myUnits.forEach((e) => {
-						if (!validMove(e,myUnits[e.type],e,false)) e.dead = true
+						if (!validMove(e,units[e.type],e,false)) e.dead = true
 					})
 					let d
 					while (1+(d = myUnits.findIndex(u => u.dead))) {
@@ -250,7 +250,7 @@
 							}
 						})
 						myUnits.forEach((e) => {
-							if (!validMove(e,myUnits[e.type],e,false)) e.dead = true
+							if (!validMove(e,units[e.type],e,false)) e.dead = true
 						})
 						while (1+(d = myUnits.findIndex(u => u.dead))) {
 							const unit = units[myUnits[d].type]
@@ -259,7 +259,7 @@
 							myUnits.splice(d,1)
 						}
 						enemUnits.forEach((e) => {
-							if (!validMove(e,enemUnits[e.type],e,false)) e.dead = true
+							if (!validMove(e,units[e.type],e,false)) e.dead = true
 						})
 						while (1+(d = enemUnits.findIndex(u => u.dead))) {
 							const unit = units[enemUnits[d].type]
