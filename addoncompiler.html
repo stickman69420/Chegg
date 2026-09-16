@@ -87,7 +87,10 @@
 						} else if (unitnames.includes(newName)) {
 							log.insertAdjacentHTML("beforeend","<e style='color:blue;font-size:0.75em;'>"+file.name+" is overriding a pre-existing unit<br></e>")
 						}
-						const jsonReader = new zip.TextReader(text);
+						if (newName == "manifest") {
+							entData.compileDate = Date.now()
+						}
+						const jsonReader = new zip.TextReader(JSON.stringify(entData,null,"\t"));
 						zipWriter.add(newName+".json", jsonReader);
 						//const myNewFile = new File([text], newName, {type: e.type});
 						//addonFiles.push(myNewFile)
@@ -178,12 +181,12 @@
 										break;
 									case 3:
 										voff = Math.floor(at.set.length/2)-(at.offset ?? [0,0])[1]
-										canvas.height = Math.max((at.set.length+2*Math.abs((at.offset ?? [0,0])[1]))*16,canvas.height)
+										canvas.height = Math.max((at.set.length+2*Math.abs((at.offset ?? [0,0])[1]-((at.offset ?? [0,0])[1] ? 0.5 : 0)))*16,canvas.height)
 										//ctx.setTransform(1,0,0,1,-canvas.width/2,-canvas.height/2)
 										let co = []
 										at.set.forEach((e,ee) => {
 											const hoff = Math.floor(e.length/2)-(at.offset ?? [0,0])[0]
-											canvas.width = Math.max((e.length+2*Math.abs((at.offset ?? [0,0])[0]))*16,canvas.width)
+											canvas.width = Math.max((e.length+2*Math.abs((at.offset ?? [0,0])[0]-((at.offset ?? [0,0])[0] ? 0.5 : 0)))*16,canvas.width)
 											//ctx.setTransform(1,0,0,1,-canvas.width/2,-canvas.height/2)
 											e.forEach((r,rr) => {
 												if (r) co.push([rr-hoff,ee-voff]) //ctx.fillRect(rr*16,ee*16,16,16)
@@ -205,10 +208,15 @@
 											const cur = Array.isArray(cur2) ? cur2[0] : cur2
 											//ctx.fillRect(cur.offset[0]*16,cur.offset[1]*16,16,16)
 											details.push({"x":cur.offset[0]*16,"y":cur.offset[1]*16,"w":16,"h":16,"c":fst,"o":false})
+											if (cur.parentOff) details.push({"x":cur.parentOff[0]*16+8,"y":cur.parentOff[1]*16+8,"xx":cur.offset[0]*16+8,"yy":cur.offset[1]*16+8,"c":sst,"l":true,"a":true})
 											//details.push({"x":cur.offset[0]*16,"y":cur.offset[1]*16,"w":16,"h":16,"c":sst,"o":true})
 											canvas.height = Math.max((Math.abs(cur.offset[1]))*32+16,canvas.height)
 											canvas.width = Math.max((Math.abs(cur.offset[0]))*32+16,canvas.width)
-											if (cur.children) queue.push(...cur.children)
+											if (cur.children) cur.children.forEach((e) => {
+												e.parentOff = cur.offset
+												queue.push(e)
+											})
+											//if (cur.children) queue.push(...cur.children)
 										}
 										break;
 								}
@@ -233,6 +241,16 @@
 								ctx.moveTo(value.x+canvas.width/2-8,value.y+canvas.height/2-8)
 								ctx.lineTo(value.xx+canvas.width/2-8,value.yy+canvas.height/2-8)
 								ctx.stroke()
+								if (value.a) {
+									const vec = [value.xx-value.x,value.yy-value.y]
+									const amp = Math.hypot(...vec)
+									const norm = [vec[0]/amp,vec[1]/amp]
+									ctx.beginPath()
+									ctx.moveTo(value.xx+canvas.width/2-8-5*norm[0]-5*norm[1],value.yy+canvas.height/2-8-5*norm[1]-5*norm[0])
+									ctx.lineTo(value.xx+canvas.width/2-8,value.yy+canvas.height/2-8)
+									ctx.lineTo(value.xx+canvas.width/2-8-5*norm[0]+5*norm[1],value.yy+canvas.height/2-8-5*norm[1]+5*norm[0])
+									ctx.stroke()
+								}
 							} else if (value.o) {
 								ctx.strokeStyle = value.c
 								ctx.strokeRect(value.x+canvas.width/2-8,value.y+canvas.height/2-8,value.w,value.h)
@@ -275,7 +293,7 @@
 							mani.compileDate = Date.now()
 							mani.fileName = "manifest.json"
 							//const manifest = new File([mani],"manifest.json")
-							zipWriter.add("manifest.json", new zip.TextReader(JSON.stringify(mani)))
+							zipWriter.add("manifest.json", new zip.TextReader(JSON.stringify(mani,null,"\t")))
 							manifest = mani
 						}
 						await zipWriter.close();

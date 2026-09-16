@@ -24,6 +24,7 @@ let moddednames = []
 let modunits = []
 let unitImageNames = []
 let overlap = 0
+let allAddonData
 
 let addonsLoad = false
 
@@ -31,6 +32,7 @@ loadAddons()
 async function loadAddons() {
 	try {
 		const allAddons = await getEverything()
+		allAddonData = allAddons
 		//alert(JSON.stringify(allAddons))
 		for (const [key,value] of Object.entries(allAddons)) {
 			if (localStorage.getItem(key.replace(/[^\w]/gi, '_')) == "true") {
