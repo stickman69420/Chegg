@@ -28,7 +28,7 @@
 			//alert(JSON.stringify(Object.keys(zip)))
 			const validimgnames = ["agent","allay","armadillo","axolotl","bat","bee","blaze","bogged","breeze","camel","camel_husk","cat","cave_spider","chicken","cod","copper_golem","cow","creaking","creeper","dolphin","donkey","drowned","elder_guardian","end_crystal","ender_dragon","enderman","endermite","evoker","fox","frog","ghast","glow_squid","goat","guardian","happy_ghast","hoglin","horse","husk","iron_golem","llama","magma_cube","mooshroom","mule","nautilus","ocelot","panda","parched","parrot","phantom","pig","piglin","piglin_brute","pillager","polar_bear","pufferfish","rabbit","ravager","salmon","sheep","shulker","silverfish","skeleton","skeleton_horse","slime","sniffer","snow_golem","spider","squid","stray","strider","sulphur_cube","tadpole","trader_llama","tropical_fish","turtle","vex","villager","vindicator","wandering_trader","warden","witch","wither","wither_skeleton","wolf","zoglin","zombie","zombie_horse","zombie_nautilus","zombie_villager","zombified_piglin"]
 			const bgimgnames = ["black","white"]
-			const attacknames = ["slash","explosion","spike","sweep","arrow","fire","breath"]
+			const attacknames = ["slash","explosion","spike","sweep","arrow","fire","breath","snowball","laser"]
 			
 			let bgimgs = []
 			window.maxload = bgimgnames.length+unitnames.length*2
@@ -159,7 +159,7 @@
 										break;
 									case 1:
 										voff = Math.floor(at.set.length/2)-(at.offset ?? [0,0])[1]
-										canvas.height = (at.set.length+2*Math.abs((at.offset ?? [0,0])[1]))*16
+										canvas.height = Math.max((at.set.length+2*Math.abs((at.offset ?? [0,0])[1]))*16,canvas.height)
 										//ctx.setTransform(1,0,0,1,-canvas.width/2,-canvas.height/2)
 										at.set.forEach((e,ee) => {
 											const hoff = Math.floor(e.length/2)-(at.offset ?? [0,0])[0]
@@ -176,8 +176,10 @@
 									case 2:
 										details.push({"x":((at.offset ?? [0,0])[0]-Math.floor(at.size[0]/2))*16,"y":((at.offset ?? [0,0])[1]-Math.floor(at.size[1]/2))*16,"w":at.size[0]*16,"h":at.size[1]*16,"c":fst,"o":false})
 										details.push({"x":((at.offset ?? [0,0])[0]-Math.floor(at.size[0]/2))*16,"y":((at.offset ?? [0,0])[1]-Math.floor(at.size[1]/2))*16,"w":at.size[0]*16,"h":at.size[1]*16,"c":sst,"o":true})
-										canvas.width = Math.max((Math.abs((at.offset ?? [0,0])[0])+at.size[0])*16,canvas.width)
-										canvas.height = Math.max((Math.abs((at.offset ?? [0,0])[1])+at.size[1])*16,canvas.height)
+										/*canvas.width = Math.max((Math.abs((at.offset ?? [0,0])[0]-((at.offset ?? [0,0])[0] ? 0.5 : 0))+at.size[0])*16,canvas.width)
+										canvas.height = Math.max((Math.abs((at.offset ?? [0,0])[1]-((at.offset ?? [0,0])[1] ? 0.5 : 0))+at.size[1])*16,canvas.height)*/
+										canvas.width = Math.max((at.size[0]+2*Math.abs((at.offset ?? [0,0])[0]-((at.offset ?? [0,0])[0] ? 0.5 : 0)))*16,canvas.width)
+										canvas.height = Math.max((at.size[1]+2*Math.abs((at.offset ?? [0,0])[1]-((at.offset ?? [0,0])[1] ? 0.5 : 0)))*16,canvas.height)
 										break;
 									case 3:
 										voff = Math.floor(at.set.length/2)-(at.offset ?? [0,0])[1]
