@@ -1,18 +1,72 @@
-function imageLoaded(e,r,t) {
+function imageLoaded(filt) {
 	loadedc++
 	loadBar.value = loadedc/maxload
-	if (loadedc == maxload) imagesLoaded()
+	if (loadedc == maxload) imagesLoaded(filt)
 }	
-function imagesLoaded() {
+function imagesLoaded(filt) {
 	loadBarDiv.remove()
+	/*alert(JSON.stringify(unitimgs.map(i => i.src.split("/").at(-1))))
+	alert(JSON.stringify(units))*/
+	const unsort = units//JSON.parse(JSON.stringify(units))
+	units = {}
+	Object.keys(unsort).sort((a,b)=>((unsort[a].cost ?? 0) - (unsort[b].cost ?? 0) || -a.localeCompare(b))).forEach((e) => {
+		units[e] = unsort[e]
+	})
+	if (filt ?? true) {
+		deck = deck.filter(u => units[u] != undefined)
+		deck2 = deck2.filter(u => units[u] != undefined)
+	}
 	allDone()
 }
 
-const unitnames = ["villager","zombie","creeper","pig","rabbit","pufferfish","iron_golem","frog","skeleton","blaze","phantom","enderman","slime","shulker","cat","sniffer","wither"]
+let unitnames = ["villager","zombie","creeper","pig","rabbit","pufferfish","iron_golem","frog","skeleton","blaze","phantom","enderman","slime","shulker","cat","sniffer","wither"]
+let moddednames = []
+let modunits = []
+let unitImageNames = []
+let overlap = 0
+
+let addonsLoad = false
+
+loadAddons()
+async function loadAddons() {
+	try {
+		const allAddons = await getEverything()
+		//alert(JSON.stringify(allAddons))
+		for (const [key,value] of Object.entries(allAddons)) {
+			if (localStorage.getItem(key.replace(/[^\w]/gi, '_')) == "true") {
+				value.filter(f => f.fileName && f.fileName.endsWith(".json") && f.fileName != "manifest.json").forEach((e) => {
+					const newName = e.fileName.toLowerCase().replaceAll(" ","_").slice(0,-5) 
+					if (!moddednames.includes(newName)) {
+						moddednames.push(newName)
+						modunits[newName] = e
+						if (unitnames.includes(e.fileName)) overlap++
+						else unitnames.push(newName)
+					}
+				})
+			}
+		}
+	} catch (err) {
+		alert(err.line+": "+err.message)
+	}
+	addonsLoad = true
+}
+
+function addonsLoaded(interval) {
+	return new Promise((resolve,reject) => {
+		if (addonsLoad) resolve();
+		const timer = setInterval(() => {
+			if (addonsLoad) {
+				clearInterval(timer);
+				resolve();
+			}
+		}, interval ?? 16)
+	})
+}
+
 let loadedc = 0
-let units = []
+let units = {}
 loaded = [[],[],[]]
-let unitimgs = []
+let unitimgs = {}
 let deck = localStorage.getItem("deck") ? JSON.parse(localStorage.getItem("deck")) : []
 let deck2 = localStorage.getItem("deck2") ? JSON.parse(localStorage.getItem("deck2")) : []
 let map = localStorage.getItem("map") ? JSON.parse(localStorage.getItem("map")) : Array(8).fill(0).map(m => Array(10).fill(0).map((n,nn) => ({"type":nn <= 1 ? 1 : (nn >= 8 ? 2 : 0),"p2spawn":nn <= 1,"p1spawn":nn >= 8})))
@@ -33,16 +87,29 @@ async function loadJSON(url,func) {
 	}
 }
 
-function loadUnits() {
-	unitnames.forEach((e,ee) => {
-		loadJSON("./units/"+e+".json",function (e,i) {
-			units[i] = (e)
-			unitimgs[i] = new Image()
-			unitimgs[i].loadid = units[i].img
-			unitimgs[i].src = "./images/units/"+units[i].img+".png"
-			unitimgs[i].onload = imageLoaded
-			//unitimgs[i].addEventListener("error",function (e) {imageerror(e)})
-		},ee)
+async function loadUnits(filt) {
+	await addonsLoaded()
+	maxload += moddednames.length-overlap
+	unitnames.forEach(async (e,ee) => {
+		//alert(JSON.stringify(moddednames)+","+e+","+moddednames.includes(e))
+		if (moddednames.includes(e)) {
+			units[e] = modunits[e]
+			unitimgs[e] = new Image()
+			unitimgs[e].loadid = units[e].img
+			unitimgs[e].src = "./images/units/"+units[e].img+".png"
+			unitimgs[e].onload = imageLoaded.bind(null,filt)
+			unitImageNames[ee] = units[e].img
+		} else {
+			loadJSON("./units/"+e+".json",function (e,i,r) {
+				units[i] = (e)
+				unitimgs[i] = new Image()
+				unitimgs[i].loadid = units[i].img
+				unitimgs[i].src = "./images/units/"+units[i].img+".png"
+				unitimgs[i].onload = imageLoaded.bind(null,filt)
+				unitImageNames[r] = units[i].img
+				//unitimgs[i].addEventListener("error",function (e) {imageerror(e)})
+			},e,ee)
+		}
 	})
 }
 
@@ -84,4 +151,38 @@ function copySave(data) {
 			document.execCommand("copy");
 		},
 	)
+}
+
+//IndexedDB is Not Nice
+async function getEverything() {
+	const results = {};
+	try {
+		const db = await new Promise((resolve, reject) => {
+			const request = indexedDB.open("mods");
+			request.onsuccess = () => resolve(request.result);
+			request.onerror = () => reject(request.error);
+		});
+		const stores = Array.from(db.objectStoreNames);
+		if (stores.length == 0) {
+			db.close()
+			return {}
+		}
+		const tx = db.transaction(stores, "readonly");
+		tx.oncomplete = (event) => {
+			db.close()
+		}
+		for (const name of stores) {
+			const store = tx.objectStore(name);
+			results[name] = await new Promise((resolve, reject) => {
+				const request = store.getAll();
+				request.onsuccess = () => resolve(request.result);
+				request.onerror = () => reject(request.error);
+					});
+		}
+	} catch (err) {
+		alert(err.line+": "+err.message)
+		return {}
+	}
+	return(results)
+	//console.log(results);
 }
