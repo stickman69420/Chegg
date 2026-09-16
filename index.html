@@ -2,21 +2,30 @@
 <html>
 	<head>
 		<title>Play Chegg online</title>
+		<meta charset="utf-8">
 		<script>
 			addEventListener("error", (e) => {
 				alert(e.lineno+":"+e.colno+", "+e.message+"\nMain")
 			});
 		</script>
+		<style>
+			div {
+				border: solid black thin
+			}
+		</style>
 	</head>
 	<body style="font-family: Arial;">
 		<a href="./chegg.html">Play online</a><br>
 		<a href="./chegg.html?offline=true">Play locally</a><br>
 		<a href="./deckbuild.html">Build your deck</a><br>
 		<a href="./mapbuilder.html">Create a map</a><br>
-		<button onclick="loadS()">Load map</button><button onclick="localStorage.removeItem('map')">Reset map</button>
+		<a href="./addoncompiler.html">Compile an addon</a><br>
+		<button onclick="loadM()">Load map</button><button onclick="localStorage.removeItem('map')">Reset map</button><br>
+		<button onclick="loadA()">Add an addon</button><button onclick="if (confirm('Are you sure you want to permanently delete all addons?')) {indexedDB.deleteDatabase('mods');location.reload();}">Delete all addons</button><!--button onclick="getEverything()">Get all addon data</button-->
 		<script src="./definitions.js"></script>
-		<script>
-			function loadS() {
+		<script src="https://cdn.jsdelivr.net/npm/@zip.js/zip.js@2.14.0/dist/zip.min.js"></script>
+		<script> 
+			function loadM() {
 				// Source - https://stackoverflow.com/a/40971885
 				// Posted by user4602228, modified by community. See post 'Timeline' for change history
 				// Retrieved 2026-07-17, License - CC BY-SA 4.0
@@ -37,6 +46,154 @@
 					}
 				});
 			}
+			let zipResults = []
+			
+			getEverything().then((allMods) => {
+				try {
+					console.log(allMods)
+					for (const [key,value] of Object.entries(allMods)) {
+						const rep = key.replace(/[^\w]/gi, '_')
+						const manifest = (value.find(f => f.fileName == "manifest.json") ?? {})
+						document.body.insertAdjacentHTML("beforeend","<div id='mod"+key+"'>"+(manifest.name ?? key)+"<input onclick='localStorage.setItem(\""+rep+"\",cb"+rep+".checked)' id='cb"+rep+"' type='checkbox' "+(localStorage.getItem(rep) == "true" ? "checked" : "")+"><button onclick='delMod(\""+key+"\")' id='can"+rep+"'>❌</button><br>"+(manifest.desc ?? "An addon without a description")+"<br>"+(manifest.compileDate ? "Compiled on "+new Date(manifest.compileDate).toLocaleString() : "Made without the compiler")+"</div>")
+					}
+				} catch (err) {
+					alert(err.line+": "+err.message)
+				}
+			})
+			
+			function getDBs() {
+				indexedDB.databases().then((r) => {
+					console.log(r)
+				})
+			}
+			
+			
+			async function delMod(modName) {
+				if (confirm('Are you sure you want to delete this addon?\nYou can just disable it if you wish')) {
+					//localStorage.setItem("modsVersion",Number(localStorage.getItem("modsVersion") ?? 1)+1)
+					const dbs = await indexedDB.databases()
+					let bd = indexedDB.open("mods",(dbs.find(d => d.name == "mods") ?? {"version": 0}).version+1)
+					localStorage.removeItem(modName.replace(/[^\w]/gi, '_'))
+					bd.onupgradeneeded = async (event) => {
+						event.target.result.deleteObjectStore(modName)
+						//alert("Deleted")
+					}
+					bd.onerror = function (err) {
+						alert("Please allow indexedDB to enable mods")
+						alert(err.target.error.name+": "+err.target.error.message)
+					}
+					bd.onsuccess = function (event) {
+						event.target.result.close()
+						location.reload()
+					}
+					//alert((dbs.find(d => d.name == "mods") ?? {"version": -100}).version+1)
+				}
+			}
+			
+			function loadA() {
+				let input = document.createElement('input');
+				input.type = 'file';
+				input.accept = ".zip"
+				input.click();
+				input.addEventListener('change', async (event) => {
+				try {
+					const file = event.target.files[0]; // Get the first selected file
+					if (!file) return;
+					const zipFileReader = new zip.BlobReader(file);
+					const zipReader = new zip.ZipReader(zipFileReader);
+					const entries = (await zipReader.getEntries())
+					for (e of entries.filter(e => !e.directory && e.filename.endsWith(".json"))) {
+						const jsonWriter = new zip.TextWriter();
+						const jsonText = await e.getData(jsonWriter)
+						if (e.filename != "manifest.json") {
+							const blobWriter = new zip.BlobWriter();
+							const ent = entries.find(n => n.filename == e.filename.slice(0,-5)+"_image.png")
+							let assImage = await ent.getData(blobWriter)
+							zipResults.push([assImage,e.filename.slice(0,-5)+"_image.png"])
+						}
+						/*let image = new Image()
+						image.src = URL.createObjectURL(assImage)
+						await image.decode();*/
+						//objectStore.index(e.filename)
+						let jsonResult = JSON.parse(jsonText)
+						jsonResult.fileName = e.filename
+						zipResults.push([jsonResult,e.filename])
+						/*os2.add(JSON.parse(jsonText),e.filename)
+						os2.add(assImage,e.filename.slice(0,-5)+"_image.png")*/
+					}
+					//localStorage.setItem("modsVersion",Number(localStorage.getItem("modsVersion") ?? 1)+1)
+					const dbs = await indexedDB.databases()
+					let bd = indexedDB.open("mods",(dbs.find(d => d.name == "mods") ?? {"version": 0}).version+1)
+					//alert((dbs.find(d => d.name == "mods") ?? {"version": -100}).version+1)
+					bd.onupgradeneeded = async (event) => {
+						try {
+								
+							//alert(JSON.stringify(Object.keys(event)))
+							let db = event.target.result
+							const osnames = Array.from(db.objectStoreNames)
+							let objectStore2
+							if (!osnames.includes(file.name)) db.createObjectStore(file.name)//objectStore2 = event.target.transaction
+						} catch (error) {
+							alert(error.line+": "+error.message)
+						}
+					}
+					bd.onsuccess = async (event) => {
+						try {
+							let db = event.target.result
+							objectStore2 = db.transaction(file.name,"readwrite")
+							//const db = bd.result
+							const os2 = objectStore2.objectStore(file.name)
+							//objectStore.createIndex()
+							
+							for (const q of zipResults) {
+								os2.add(...q)
+							}
+							
+							await zipReader.close();
+							
+							localStorage.setItem(file.name.replace(/[^\w]/gi, '_'),true)
+							
+							// Source - https://stackoverflow.com/a/51922661
+							// Posted by Henrik Carlström
+							// Retrieved 2026-09-13, License - CC BY-SA 4.0
+							
+							allRecords = os2.getAll();
+							allRecords.onsuccess = function() {
+								console.log(allRecords.result);
+							};
+							
+							event.target.result.close()
+							location.reload()
+						} catch (error) {
+							alert(error.line+": "+error.message)
+						}
+					}
+					bd.onerror = function (err) {
+						alert("Please allow indexedDB to enable mods")
+						alert(err.target.error.name+": "+err.target.error.message)
+					}
+					bd.onblocked = function (event) {
+						//alert(event.target.error.name+": "+event.target.error.message)
+						alert("Blocked somehow idk")
+					}
+					} catch (err) {
+						alert(err.line+": "+err.message)
+					}
+				});
+			}
+			let allRecords
+			
+			/*function toPromise(func,event) {
+				return new Promise((resolve,reject) => {
+					const res = func()
+					res[event] = function(e) {
+						resolve(e)
+					}
+					res.onerror = function(e) {
+						reject(e)
+					}
+				})
+			}*/
 		</script>
 	</body>
 </html>

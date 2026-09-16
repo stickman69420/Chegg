@@ -1,0 +1,328 @@
+<!doctype HTML>
+<html>
+	<head>
+		<title>Make an addon</title>
+		<meta charset="utf-8">
+		<script>
+			addEventListener("error", (e) => {
+				alert(e.lineno+":"+e.colno+", "+e.message+"\nMain")
+			});
+		</script>
+		<style>
+			canvas {
+				overflow: hidden;
+				image-rendering: pixelated;
+			}
+		</style>
+	</head>
+	<body style="font-family: Arial;">
+		<a href="./index.html">Back to home</a>
+		<div style="width:100%;height:100%;display:flex;justify-content:center;align-items:center;" id="loadBarDiv"><progress style="width:50%;" id="loadBar" max="1" value="0"></progress></div><div id="out"></div>
+		<e style="font-size:1em">1. Upload units <e style="font-size:0.75em">(and manifest if you have one <e style="font-size:0.5em"><strong>(best to have one)</strong></e>)</e></e><input type="file" id="files" accept=".json" multiple><br>
+		2. Make sure you're cool with the <e style="color:orange">warnings</e>, <e style="color:red">errors</e>, and <e style="color:blue">logs</e><div id="log"></div><br>
+		3. Compile it<button onclick="compile()">Compile</button>
+		<script src="./definitions.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/@zip.js/zip.js@2.14.0/dist/zip.min.js"></script>
+		<script>
+			//import * as zip from "https://cdn.jsdelivr.net/npm/zip-js@0.0.3/WebContent/zip.js";
+			//alert(JSON.stringify(Object.keys(zip)))
+			const validimgnames = ["agent","allay","armadillo","axolotl","bat","bee","blaze","bogged","breeze","camel","camel_husk","cat","cave_spider","chicken","cod","copper_golem","cow","creaking","creeper","dolphin","donkey","drowned","elder_guardian","end_crystal","ender_dragon","enderman","endermite","evoker","fox","frog","ghast","glow_squid","goat","guardian","happy_ghast","hoglin","horse","husk","iron_golem","llama","magma_cube","mooshroom","mule","nautilus","ocelot","panda","parched","parrot","phantom","pig","piglin","piglin_brute","pillager","polar_bear","pufferfish","rabbit","ravager","salmon","sheep","shulker","silverfish","skeleton","skeleton_horse","slime","sniffer","snow_golem","spider","squid","stray","strider","sulphur_cube","tadpole","trader_llama","tropical_fish","turtle","vex","villager","vindicator","wandering_trader","warden","witch","wither","wither_skeleton","wolf","zoglin","zombie","zombie_horse","zombie_nautilus","zombie_villager","zombified_piglin"]
+			const bgimgnames = ["black","white"]
+			const attacknames = ["slash","explosion","spike","sweep","arrow","fire","breath"]
+			
+			let bgimgs = []
+			window.maxload = bgimgnames.length+unitnames.length*2
+			loadUnits()
+			bgimgnames.forEach((e,ee) => {
+				bgimgs[ee] = new Image()
+				bgimgs[ee].src = "./images/ui/"+e+".png"
+				bgimgs[ee].onload = imageLoaded
+			})
+			let allow = false
+			window.allDone = function() {
+				allow = true
+				//alert(JSON.stringify(unitImageNames))
+			}
+			const zipFileWriter = new zip.BlobWriter();
+			const zipWriter = new zip.ZipWriter(zipFileWriter);
+			//let addonFiles = []
+			let canvas
+			let ctx
+			let details
+			let fst
+			let sst
+			let manifest
+			const vrules = {"move":{"type":"object","children":["style","set"]},"move/style":{"type":"number","range":[0,2]},"attack":{"type":"object"},"attack/style":{"type":"number","range":[0,5]},"img":{"type":"string"},"move/set":{"type":"object"},"attack/set":{"type":"object"},"cost":{"type":"number"},"attack/img":{"type":"string"}}
+			files.addEventListener("change",async (event) => {
+				//addonFiles = []
+				const files = event.target.files
+				if (!files) return;
+				canvas = document.createElement("canvas")
+				ctx = canvas.getContext("2d")
+				ctx.webkitImageSmoothingEnabled = false
+				ctx.mozImageSmoothingEnabled = false
+				ctx.imageSmoothingEnabled = false
+				let moves
+				let attacks
+				for (let file of files) {
+					try {
+						const text = await file.text()
+						let entData
+						try {
+							entData = JSON.parse(text)
+						} catch (err) {
+							alert(file.name+" is not valid JSON\nSkipping this file")
+							log.insertAdjacentHTML("beforeend","<e style='color:red;font-size:1.5em;'>"+file.name+" failed to load (invalid JSON)<br></e>")
+							continue;
+						}
+						if (entData) {
+						const usecount = unitImageNames.filter(n => n==entData.img).length
+						if (usecount > 0) {
+							log.insertAdjacentHTML("beforeend","<e style='color:orange;font-size:1em;'>"+file.name+" is using an image that is already in use by "+usecount+" other unit"+(usecount==1 ? "" : "s")+" ("+entData.img+".png)<br></e>")
+						}
+						unitImageNames.push(entData.img)
+						const newName = file.name.toLowerCase().replaceAll(" ","_").slice(0,-5)
+						if (newName == "villager") {
+							log.insertAdjacentHTML("beforeend","<e style='color:orange;font-size:1em;'>"+file.name+" is overriding the villager<br></e>")
+						} else if (unitnames.includes(newName)) {
+							log.insertAdjacentHTML("beforeend","<e style='color:blue;font-size:0.75em;'>"+file.name+" is overriding a pre-existing unit<br></e>")
+						}
+						const jsonReader = new zip.TextReader(text);
+						zipWriter.add(newName+".json", jsonReader);
+						//const myNewFile = new File([text], newName, {type: e.type});
+						//addonFiles.push(myNewFile)
+						canvas.width = 16
+						canvas.height = 16
+						if (newName != "manifest") {
+						let cont = false
+						for (const [key,value] of Object.entries(vrules)) {
+							let data = JSON.parse(JSON.stringify(entData))
+							for (const sub of key.split("/")) {
+								if (data != undefined) data = data[sub]
+							}
+							//alert(data)
+							//alert(JSON.stringify(data))
+							if (data != undefined) {
+								if (typeof data == value.type) {
+									if (value.type != "number" || value.range == undefined || (data >= value.range[0] && data <= value.range[1])) {
+										if (value.type == "object" && value.children) {
+											value.children.forEach((e) => {
+												if (data[e] == undefined) {
+													alert(file.name+" child \""+key+"\" is missing child outside of the valid range ("+data+", "+JSON.stringify(value.range)+")\nSkipping this file")
+													log.insertAdjacentHTML("beforeend","<e style='color:red;font-size:1.5em;'>"+file.name+" failed to load – child \""+key+"\" is outside of the valid range ("+data+", "+JSON.stringify(value.range)+")<br></e>")
+													cont = true
+												}
+											})
+										} else {
+											
+										}
+									} else {
+										alert(file.name+" child \""+key+"\" is outside of the valid range ("+data+", "+JSON.stringify(value.range)+")\nSkipping this file")
+										log.insertAdjacentHTML("beforeend","<e style='color:red;font-size:1.5em;'>"+file.name+" failed to load – child \""+key+"\" is outside of the valid range ("+data+", "+JSON.stringify(value.range)+")<br></e>")
+										cont = true
+									}
+								} else {
+									alert(file.name+" child \""+key+"\" is the wrong type ("+(typeof data)+" ≠ "+value.type+")\nSkipping this file")
+									log.insertAdjacentHTML("beforeend","<e style='color:red;font-size:1.5em;'>"+file.name+" failed to load – child \""+key+"\" is the wrong type ("+(typeof data)+" ≠ "+value.type+")<br></e>")
+									cont = true
+								}
+							}
+						}
+						if (cont) continue;
+						if (!validimgnames.includes(entData.img)) {
+							alert(entData.img+" is not a valid image\nSkipping this file")
+							log.insertAdjacentHTML("beforeend","<e style='color:red;font-size:1.5em;'>"+file.name+" failed to load (could not find "+entData.img+".png)<br></e>")
+							continue;
+						}
+						if (entData.attack && entData.attack.img != undefined && !attacknames.includes(entData.attack.img)) {
+							alert(entData.attack.img+" is not a valid image\nSkipping this file")
+							log.insertAdjacentHTML("beforeend","<e style='color:red;font-size:1.5em;'>"+file.name+" failed to load (could not find "+entData.attack.img+".png)<br></e>")
+							continue;
+						}
+						details = []
+						//ctx.setTransform(1,0,0,1,-canvas.width/2,-canvas.height/2)
+						if (entData.move) {
+							fst = "#0F07"
+							procMove(entData)
+						}
+						if (entData.attack) {
+							fst = "#F007";
+							sst = "#FF0";
+							([]).concat(entData.attack).forEach((at) => {
+								let voff
+								switch (at.style) {
+									case 0:
+										procMove(entData)
+										break;
+									case 1:
+										voff = Math.floor(at.set.length/2)-(at.offset ?? [0,0])[1]
+										canvas.height = (at.set.length+2*Math.abs((at.offset ?? [0,0])[1]))*16
+										//ctx.setTransform(1,0,0,1,-canvas.width/2,-canvas.height/2)
+										at.set.forEach((e,ee) => {
+											const hoff = Math.floor(e.length/2)-(at.offset ?? [0,0])[0]
+											canvas.width = Math.max((e.length+2*Math.abs((at.offset ?? [0,0])[0]))*16,canvas.width)
+											//ctx.setTransform(1,0,0,1,-canvas.width/2,-canvas.height/2)
+											e.forEach((r,rr) => {
+												if (r) {
+													details.push({"x":(rr-hoff)*16,"y":(ee-voff)*16,"w":16,"h":16,"c":fst,"o":false})
+													//details.push({"x":(rr-hoff)*16,"y":(ee-voff)*16,"w":16,"h":16,"c":sst,"o":true})
+												}
+											})
+										})
+										break;
+									case 2:
+										details.push({"x":((at.offset ?? [0,0])[0]-Math.floor(at.size[0]/2))*16,"y":((at.offset ?? [0,0])[1]-Math.floor(at.size[1]/2))*16,"w":at.size[0]*16,"h":at.size[1]*16,"c":fst,"o":false})
+										details.push({"x":((at.offset ?? [0,0])[0]-Math.floor(at.size[0]/2))*16,"y":((at.offset ?? [0,0])[1]-Math.floor(at.size[1]/2))*16,"w":at.size[0]*16,"h":at.size[1]*16,"c":sst,"o":true})
+										canvas.width = Math.max((Math.abs((at.offset ?? [0,0])[0])+at.size[0])*16,canvas.width)
+										canvas.height = Math.max((Math.abs((at.offset ?? [0,0])[1])+at.size[1])*16,canvas.height)
+										break;
+									case 3:
+										voff = Math.floor(at.set.length/2)-(at.offset ?? [0,0])[1]
+										canvas.height = Math.max((at.set.length+2*Math.abs((at.offset ?? [0,0])[1]))*16,canvas.height)
+										//ctx.setTransform(1,0,0,1,-canvas.width/2,-canvas.height/2)
+										let co = []
+										at.set.forEach((e,ee) => {
+											const hoff = Math.floor(e.length/2)-(at.offset ?? [0,0])[0]
+											canvas.width = Math.max((e.length+2*Math.abs((at.offset ?? [0,0])[0]))*16,canvas.width)
+											//ctx.setTransform(1,0,0,1,-canvas.width/2,-canvas.height/2)
+											e.forEach((r,rr) => {
+												if (r) co.push([rr-hoff,ee-voff]) //ctx.fillRect(rr*16,ee*16,16,16)
+											})
+										})
+										co.forEach((e) => {
+											details.push({"x":e[0]*16,"y":e[1]*16,"w":16,"h":16,"c":fst,"o":false})
+											co.forEach((r) => {
+													if (r != e) details.push({"x":e[0]*16+8,"y":e[1]*16+8,"xx":r[0]*16+8,"yy":r[1]*16+8,"c":sst,"l":true})
+											})
+										})
+										break;
+									case 4:
+										break;
+									case 5:
+										let queue = [...at.path]
+										while (queue.length > 0) {
+											const cur2 = queue.splice(0,1)
+											const cur = Array.isArray(cur2) ? cur2[0] : cur2
+											//ctx.fillRect(cur.offset[0]*16,cur.offset[1]*16,16,16)
+											details.push({"x":cur.offset[0]*16,"y":cur.offset[1]*16,"w":16,"h":16,"c":fst,"o":false})
+											//details.push({"x":cur.offset[0]*16,"y":cur.offset[1]*16,"w":16,"h":16,"c":sst,"o":true})
+											canvas.height = Math.max((Math.abs(cur.offset[1]))*32+16,canvas.height)
+											canvas.width = Math.max((Math.abs(cur.offset[0]))*32+16,canvas.width)
+											if (cur.children) queue.push(...cur.children)
+										}
+										break;
+								}
+							})
+						}
+						ctx.clearRect(0,0,16,16)
+						for (let i=0;i<canvas.width/16;i++) {
+							for (let j=0;j<canvas.height/16;j++) {
+								ctx.drawImage(bgimgs[(i+j)%2],i*16,j*16,16,16)
+							}
+						}
+						const unit = new Image();
+						unit.src = "./images/units/"+entData.img+".png";
+						await unit.decode();
+						ctx.drawImage(unit,canvas.width/2-8,canvas.height/2-8,16,16)
+						//alert(newName+": "+JSON.stringify(details))
+						ctx.lineWidth = 2
+						for (const value of details) {
+							if (value.l) {
+								ctx.strokeStyle = value.c
+								ctx.beginPath()
+								ctx.moveTo(value.x+canvas.width/2-8,value.y+canvas.height/2-8)
+								ctx.lineTo(value.xx+canvas.width/2-8,value.yy+canvas.height/2-8)
+								ctx.stroke()
+							} else if (value.o) {
+								ctx.strokeStyle = value.c
+								ctx.strokeRect(value.x+canvas.width/2-8,value.y+canvas.height/2-8,value.w,value.h)
+							} else {
+								ctx.fillStyle = value.c
+								ctx.fillRect(value.x+canvas.width/2-8,value.y+canvas.height/2-8,value.w,value.h)
+							}
+						}
+						await canvas.toBlob((e) => {
+							zipWriter.add(newName+"_image.png", new zip.BlobReader(e))
+						});
+						} else manifest = entData
+						
+						/*let unit = new Image()
+						unit.src = "./images/units/"+entData.img+".png"
+						unit.onload = function () {
+							ctx.drawImage(unit,canvas.width/2-8,canvas.height/2-8,16,16)
+							canvas.toBlob((e) => {
+								zipWriter.add(newName+"_image.png", new zip.BlobReader(e))
+							});
+						}*/
+					}
+					} catch (error) {
+						alert(error.line+": "+error.message)
+					}
+				}
+				canvas.remove()
+				if (!manifest) {
+					log.insertAdjacentHTML("beforeend","<e style='color:orangeRed;font-size:1.25em;'>Manifest.json is missing. Critical fields will be filled out when you press compile but some non-critical fields will be missing<br></e>")
+				}
+				alert("Done")
+			})
+			window.compile = async function() {
+				if (allow) {
+					try {
+						if (!manifest) {
+							let mani = {}
+							mani.name = prompt("Addon name")
+							mani.desc = prompt("Addon description")
+							mani.compileDate = Date.now()
+							mani.fileName = "manifest.json"
+							//const manifest = new File([mani],"manifest.json")
+							zipWriter.add("manifest.json", new zip.TextReader(JSON.stringify(mani)))
+							manifest = mani
+						}
+						await zipWriter.close();
+						const blob = await zipFileWriter.getData();
+						//const blob = await zipFs.exportBlob();
+						//const blob = await clientZip.downloadZip(addonFiles).blob()
+						const link = document.createElement("a")
+						link.href = URL.createObjectURL(blob)
+						link.download = manifest.name.replace(/[^\w]/gi, '_')+".zip"
+						link.click()
+						link.remove()
+						URL.revokeObjectURL(blob)
+					} catch (error) {
+						alert(error.line+": "+error.message)
+					}
+				}
+			}
+			function procMove(entData) {
+				switch (entData.move.style) {
+					case 1:
+					case 0:
+						const voff = Math.floor(entData.move.set.length/2)-(entData.move.offset ?? [0,0])[1]
+						canvas.height = (entData.move.set.length+2*Math.abs((entData.move.offset ?? [0,0])[1]))*16
+						//ctx.setTransform(1,0,0,1,-canvas.width/2,-canvas.height/2)
+						entData.move.set.forEach((e,ee) => {
+							const hoff = Math.floor(e.length/2)-(entData.move.offset ?? [0,0])[0]
+							canvas.width = Math.max((e.length+2*Math.abs((entData.move.offset ?? [0,0])[0]))*16,canvas.width)
+							//ctx.setTransform(1,0,0,1,-canvas.width/2,-canvas.height/2)
+							e.forEach((r,rr) => {
+								if (r) details.push({"x":rr*16-hoff*16,"y":ee*16-voff*16,"w":16,"h":16,"c":fst,"o":false})
+							})
+						})
+						break;
+					case 2:
+						const xs = entData.move.set.map(m => m.dest[0])
+						const ys = entData.move.set.map(m => m.dest[1])
+						const mx = Math.min(...xs)
+						const my = Math.min(...ys)
+						canvas.width = Math.max(Math.max(...xs)-mx,canvas.width)
+						canvas.height = Math.max(Math.max(...ys)-my,canvas.height)
+						//ctx.setTransform(1,0,0,1,-canvas.width/2,-canvas.height/2)
+						entData.move.set.forEach((e) => {
+							details.push({"x":e.dest[0]*16-mx*16,"y":e.dest[1]*16-my*16,"w":16,"h":16,"c":fst,"o":false})
+						})
+						break;
+				}
+			}
+		</script>
+	</body>
+</html>

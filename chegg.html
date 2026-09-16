@@ -88,11 +88,11 @@
 											if (target >= 0) {
 												const tent = (pta >= 0 ? enemUnits : myUnits)[target]
 												const eff = units[tent.type].death
-												const min = pta < 0
-												procSpec(eff,min,tent);
+												const min = pta < 0;
 												(pta >= 0 ? enemUnits : myUnits).splice(target,1)
 												if (pta >= 0) sendData({"dataType":2,"unit":target})
 												else sendData({"dataType":3,"unit":target})
+												procSpec(eff,min,tent);
 											}
 										}
 									})
@@ -130,10 +130,10 @@
 				},1000)
 			}
 			
-			const attacknames = ["slash","explosion","spike","sweep","arrow","fire"]
+			const attacknames = ["slash","explosion","spike","sweep","arrow","fire","breath"]
 			const bgimgnames = ["black","white","blue","lblue","red","lred","dblue","lapis","resin","shroomlight","piston","conveyor","tntt","tntb","wallt","wallb"]
 			const tsets = [[0,1],[2,3],[4,5],[6,7],[8,9],[10],[11],[12,13],[14,15]]
-			const maxload = unitnames.length*2+attacknames.length+bgimgnames.length
+			let maxload = unitnames.length*2+attacknames.length+bgimgnames.length
 			let glc = 0
 			let attackimgs = {}
 			let bgimgs = []
@@ -194,9 +194,9 @@
 					let d
 					while (1+(d = myUnits.findIndex(u => u.dead))) {
 						const unit = units[myUnits[d].type]
-						procSpec(unit.death,true,myUnits[d]);
-						sendData({"dataType":3,"unit":d})
 						myUnits.splice(d,1)
+						sendData({"dataType":3,"unit":d})
+						procSpec(unit.death,true,myUnits[d]);
 					}
 					if (pid == 0) {
 						myUnits.forEach((e,ee) => {
@@ -254,44 +254,55 @@
 						})
 						while (1+(d = myUnits.findIndex(u => u.dead))) {
 							const unit = units[myUnits[d].type]
-							procSpec(unit.death,true,myUnits[d]);
-							sendData({"dataType":3,"unit":d})
 							myUnits.splice(d,1)
+							sendData({"dataType":3,"unit":d})
+							procSpec(unit.death,true,myUnits[d]);
 						}
 						enemUnits.forEach((e) => {
 							if (!validMove(e,units[e.type],e,false)) e.dead = true
 						})
 						while (1+(d = enemUnits.findIndex(u => u.dead))) {
 							const unit = units[enemUnits[d].type]
-							procSpec(unit.death,true,enemUnits[d]);
-							sendData({"dataType":2,"unit":d})
 							enemUnits.splice(d,1)
+							sendData({"dataType":2,"unit":d})
+							procSpec(unit.death,true,enemUnits[d]);
 						}
 					}
 				}
+				let eff
 				switch (data.dataType) {
 					case 0:
 						enemUnits.push({...data,"dataType":undefined})
 						break;
 					case 1:
-						enemUnits[data.unit].x = data.x
-						enemUnits[data.unit].y = data.y
+						if (enemUnits[data.unit]) {
+							enemUnits[data.unit].x = data.x
+							enemUnits[data.unit].y = data.y
+						}
 						break;
 					case 2:
-						procSpec(units[myUnits[data.unit].type].death,true,myUnits[data.unit])
-						myUnits.splice(data.unit,1)
+						if (myUnits[data.unit]) {
+							eff = units[myUnits[data.unit].type].death
+							myUnits.splice(data.unit,1)
+							procSpec(eff,true,myUnits[data.unit])
+						}
 						break;
 					case 3:
-						procSpec(units[enemUnits[data.unit].type].death,false,enemUnits[data.unit])
-						enemUnits.splice(data.unit,1)
+						if (enemUnits[data.unit]) {
+							eff = units[enemUnits[data.unit].type].death
+							enemUnits.splice(data.unit,1)
+							procSpec(eff,false,enemUnits[data.unit])
+						}
 						break;
 					case 4:
 						animData["attack"+aid] = {"time":0,"length":(attackimgs[data.img].width/16)*(1/15),"frame":0,"anim":attackimgs[data.img],"x":data.x,"sx":data.x,"sy":data.y,"ox":data.ox,"oy":data.oy,"rot2":data.rot,"y":data.y,"w":data.w,"h":data.h,"frame":0,"update":function () {this.frame = Math.floor(this.time/this.length*(this.anim.width/16));this.x=this.ox+(this.sx-this.ox)/this.length*this.time;this.y=this.oy+(this.sy-this.oy)/this.length*this.time;if (this.rot2 === true) {this.rot = Math.atan2(this.sy-this.oy,this.sx-this.ox)} else {this.rot = this.rot2}}}
 						aid++
 						break;
 					case 5:
-						myUnits[data.unit].x = data.x
-						myUnits[data.unit].y = data.y
+						if (myUnits[data.unit]) {
+							myUnits[data.unit].x = data.x
+							myUnits[data.unit].y = data.y
+						}
 						break;
 					case 6:
 						for (let i=0;i<data.count;i++) {
@@ -386,16 +397,16 @@
 							targets.forEach((e) => {
 								const d = myUnits.indexOf(e)
 								const unit = units[e.type]
-								procSpec(unit.death,true,e);
-								sendData({"dataType":3,"unit":d})
 								myUnits.splice(d,1)
+								sendData({"dataType":3,"unit":d})
+								procSpec(unit.death,true,e);
 							})
 							targets2.forEach((e) => {
 								const d = enemUnits.indexOf(e)
 								const unit = units[e.type]
-								procSpec(unit.death,true,e);
-								sendData({"dataType":2,"unit":d})
 								enemUnits.splice(d,1)
+								sendData({"dataType":2,"unit":d})
+								procSpec(unit.death,true,e);
 							})
 						}
 					})
@@ -442,7 +453,7 @@
 					ctx.lineWidth = 1
 					ctx.fillStyle = "#000"
 					if (mana > 6) ctx.fillText("+"+(mana-6),25,750)
-					ctx.fillStyle = turn ? (myUnits.some(u => u.type == 0) ? "#FA0" : "#AAA") : "#A00"
+					ctx.fillStyle = turn ? (myUnits.some(u => u.type == "villager") ? "#FA0" : "#AAA") : "#A00"
 					ctx.fillRect(1050,700,300,100)
 					ctx.fillStyle = "#000"
 					ctx.textAlign = "center"
@@ -485,7 +496,7 @@
 							if (e.colOver) ctx.fillStyle = e.colOver
 							if (e.set) {
 								e.set.forEach((r) => {
-									if (r.x >= 0 && r.x <= 9) {
+									if ((r.x >= 0 || r.x+(r.w ?? 1) >= 0) && (r.x <= 9 || r.x+(r.w ?? 1) <= 9)) {
 										ctx.fillRect(r.x*100+50,r.y*100,(r.w ?? 1)*100,(r.h ?? 1)*100)
 										//ctx.strokeRect(e.x*100+50,e.y*100,(e.w ?? 1)*100,(e.h ?? 1)*100)
 									}
@@ -499,7 +510,7 @@
 									})
 								})
 							} else {
-								if (e.x >= 0 && e.x <= 9) {
+								if ((e.x >= 0 || e.x+(e.w ?? 1) >= 0) && (e.x <= 9 || e.x+(e.w ?? 1) <= 9)) {
 									ctx.fillRect(e.x*100+50,e.y*100,(e.w ?? 1)*100,(e.h ?? 1)*100)
 									ctx.strokeRect(e.x*100+50,e.y*100,(e.w ?? 1)*100,(e.h ?? 1)*100)
 								}
@@ -606,7 +617,7 @@
 			const orth = [[0,-1],[1,0],[0,1],[-1,0]]
 			let mydeck = inIframe ? deck2 : deck
 			shuffle(mydeck)
-			let clickable = [{"x":1250,"y":600,"w":100,"h":100,"state":true,"onclick":function () {this.state = !this.state}},{"x":1050,"y":700,"w":300,"h":100,"onclick":function() {if (turn && myUnits.some(u => u.type == 0)) {sendData("turn");turn = false;sel=undefined;seltype=undefined;} else if (turn) {alert("Place your villager first")}}},{"x":50,"y":0,"w":1000,"h":800,"onclick":function(off) {
+			let clickable = [{"x":1250,"y":600,"w":100,"h":100,"state":true,"onclick":function () {this.state = !this.state}},{"x":1050,"y":700,"w":300,"h":100,"onclick":function() {if (turn && myUnits.some(u => u.type == "villager")) {sendData("turn");turn = false;sel=undefined;seltype=undefined;} else if (turn) {alert("Place your villager first")}}},{"x":50,"y":0,"w":1000,"h":800,"onclick":function(off) {
 				const roff = {"x":Math.floor(off.x/100),"y":Math.floor(off.y/100)}
 				if (turn) {
 					switch (seltype) {
@@ -732,11 +743,11 @@
 											ttype = pta >= 0
 											const tent = (pta >= 0 ? enemUnits : myUnits)[target]
 											const eff = units[tent.type].death
-											const min = pta < 0
-											procSpec(eff,min,tent);
+											const min = pta < 0;
 											(pta >= 0 ? enemUnits : myUnits).splice(target,1)
 											if (pta >= 0) sendData({"dataType":2,"unit":target})
 											else sendData({"dataType":3,"unit":target})
+											procSpec(eff,min,tent);
 											if (attack.goto && sel != undefined) {
 												un.x = attack.x
 												un.y = attack.y
@@ -758,11 +769,11 @@
 											if (attack.dmg ?? true) {
 												const tent = (pta >= 0 ? enemUnits : myUnits)[target]
 												const eff = units[tent.type].death
-												const min = pta < 0
-												procSpec(eff,min,tent);
+												const min = pta < 0;
 												(pta >= 0 ? enemUnits : myUnits).splice(target,1)
 												if (pta >= 0) sendData({"dataType":2,"unit":target})
 												else sendData({"dataType":3,"unit":target})
+												procSpec(eff,min,tent);
 											}
 											if (attack.pull) {
 												(pta >= 0 ? enemUnits : myUnits)[target].x -= attack.dir[0]*attack.pull;
@@ -804,7 +815,7 @@
 					}
 				}
 			}}]
-			addToDraw(0)
+			addToDraw("villager")
 			
 			for (let i=0;i<15;i++) {
 				clickable.push({"x":1050+Math.floor(i/6)*100,"y":100*(i%6),"w":100,"h":100,"onclick":function () {selFromDraw(this.pos)},"pos":i})
