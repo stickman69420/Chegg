@@ -1,0 +1,50 @@
+<!doctype HTML>
+<html>
+	<head>
+		<title>We got a scholar over here</title>
+		<script>
+			addEventListener("error", (e) => {
+				alert(e.lineno+":"+e.colno+", "+e.message+"\nMain")
+			});
+		</script>
+		<meta charset="utf-8">
+		<style>
+			img {
+				image-rendering: pixelated;
+				width: 25%;
+			}
+		</style>
+	</head>
+	<body style="font-family: Arial;">
+		<a href="./index.html">Back to home</a>
+		<div style="width:100%;height:100%;display:flex;justify-content:center;align-items:center;" id="loadBarDiv"><progress style="width:50%;" id="loadBar" max="1" value="0"></progress></div><div id="out"></div>
+		The following images provide a quick summary of the move and attack sets for each minion type.<br>
+		The green tiles show possible moves.<br>
+		The red tiles show possible attacks.<br>
+		The yellow lines show connections between attacks:<br>
+		<ul style="margin-top:0px;">
+			<li>Rectangles show that the enclosed tiles will recieve damage at the same time</li>
+			<li>Tiles connected by normal yellow lines will recieve damage at the same time</li>
+			<li>Attacks connected by yellow arrows follow a path, and a minion in the path will block it</li>
+		</ul>
+		<script src="./definitions.js"></script>
+		<script>
+			let infoimgnames = unitnames.map(n => n+"_image")
+			function allDone() {
+				infoimgnames.forEach((e,ee) => {
+					document.body.insertAdjacentHTML("beforeend","<img src='./images/info/"+e+".png'>")
+				})
+				for (const [key,value] of Object.entries(allAddonData)) {
+					if (localStorage.getItem(key.replace(/[^\w]/gi, '_')) == "true") {
+						value.filter(d => d instanceof Blob).forEach((e) => {
+							document.body.insertAdjacentHTML("beforeend","<img src='"+URL.createObjectURL(e)+"'>")
+						})
+					}
+				}
+			}
+			maxload = unitnames.length*2
+			loadUnits()
+			
+		</script>
+	</body>
+</html>
