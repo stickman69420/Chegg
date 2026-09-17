@@ -170,9 +170,6 @@ async function getEverything() {
 			return {}
 		}
 		const tx = db.transaction(stores, "readonly");
-		tx.oncomplete = (event) => {
-			db.close()
-		}
 		for (const name of stores) {
 			const store = tx.objectStore(name);
 			results[name] = await new Promise((resolve, reject) => {
@@ -180,6 +177,9 @@ async function getEverything() {
 				request.onsuccess = () => resolve(request.result);
 				request.onerror = () => reject(request.error);
 					});
+		}
+		tx.oncomplete = (event) => {
+			db.close()
 		}
 	} catch (err) {
 		alert(err.line+": "+err.message)

@@ -113,7 +113,7 @@
 				if (glc == 2) initGame()
 			}
 			
-			const inIframe = window.self !== window.top;
+			const inIframe = GET.offlinep2//window.self !== window.top;
 			
 			function copyid() {
 				navigator.clipboard.writeText(peerID)
@@ -130,7 +130,7 @@
 				},1000)
 			}
 			
-			const attacknames = ["slash","explosion","spike","sweep","arrow","fire","breath","snowball","laser"]
+			const attacknames = ["slash","explosion","spike","sweep","arrow","fire","breath","snowball","laser","jaws"]
 			const bgimgnames = ["black","white","blue","lblue","red","lred","dblue","lapis","resin","shroomlight","piston","conveyor","tntt","tntb","wallt","wallb"]
 			const tsets = [[0,1],[2,3],[4,5],[6,7],[8,9],[10],[11],[12,13],[14,15]]
 			let maxload = unitnames.length*2+attacknames.length+bgimgnames.length
@@ -344,6 +344,8 @@
 			}
 			
 			function initGame() {
+				mydeck = inIframe ? deck2 : deck
+				shuffle(mydeck)
 				multiinit.innerHTML = "<canvas id='canvas' width='1350' height='800'></canvas>"
 				multiinit.style.width = "100%"
 				multiinit.style.textAlign = "center"
@@ -615,8 +617,7 @@
 			let turncount = 0
 			let aid = 0
 			const orth = [[0,-1],[1,0],[0,1],[-1,0]]
-			let mydeck = inIframe ? deck2 : deck
-			shuffle(mydeck)
+			let mydeck
 			let clickable = [{"x":1250,"y":600,"w":100,"h":100,"state":true,"onclick":function () {this.state = !this.state}},{"x":1050,"y":700,"w":300,"h":100,"onclick":function() {if (turn && myUnits.some(u => u.type == "villager")) {sendData("turn");turn = false;sel=undefined;seltype=undefined;} else if (turn) {alert("Place your villager first")}}},{"x":50,"y":0,"w":1000,"h":800,"onclick":function(off) {
 				const roff = {"x":Math.floor(off.x/100),"y":Math.floor(off.y/100)}
 				if (turn) {
@@ -641,16 +642,29 @@
 								seltype = 1
 								movements = []
 								const un = myUnits[sel]
-								const unit = units[un.type]
+								let unit = units[un.type]
 								let hoff
 								let voff
 								if (unit.move) {
 									processMove(un,unit,false)
 								}
 								attacks = []
-								if (unit.attack && un.moved < 2 && mana > 0) {
+								if (unit.attack && un.moved < 2) {
 									[].concat(unit.attack).forEach((at) => {
+										if (mana > (at.cost ?? 1)-1) {
 										if (typeof at == "object") {
+											if (at.style < 0) {
+												unit = JSON.parse(JSON.stringify(unit))
+												at.style *= -1
+												if (!pid) {
+													let w = 0
+													at.set.forEach((e) => {
+														e.reverse()
+														w = Math.max(w,e.length)
+													})
+													if (at.offset) at.offset[0] = at.offset[0]*-1-(1-w%2)
+												}
+											}
 											switch (at.style) {
 												case (0):
 													processMove(un,unit,true,at)
@@ -708,6 +722,7 @@
 													break;
 											}
 										}
+										}
 									})
 								}
 							}
@@ -739,23 +754,7 @@
 										let pta = enemUnits.findIndex(u => attack.set.some(c => c.x==u.x && c.y==u.y))
 										let pta2 = attack.ffire ? myUnits.findIndex(u => attack.set.some(c => c.x==u.x && c.y==u.y)) : -1
 										while ((i==0 || attack.pierce) && (pta >= 0 || pta2 >= 0)) {
-											target = pta >= 0 ? pta : pta2
-											ttype = pta >= 0
-											const tent = (pta >= 0 ? enemUnits : myUnits)[target]
-											const eff = units[tent.type].death
-											const min = pta < 0;
-											(pta >= 0 ? enemUnits : myUnits).splice(target,1)
-											if (pta >= 0) sendData({"dataType":2,"unit":target})
-											else sendData({"dataType":3,"unit":target})
-											procSpec(eff,min,tent);
-											if (attack.goto && sel != undefined) {
-												un.x = attack.x
-												un.y = attack.y
-												sendData({"dataType":1,"unit":sel,"x":un.x,"y":un.y})
-											}
-											un.moved = 2
-											sel = undefined
-											seltype = undefined
+											dealWithAttack(attack,un,pta,pta2)
 											i++
 											pta = enemUnits.findIndex(u => attack.set.some(c => c.x==u.x && c.y==u.y))
 											pta2 = attack.ffire ? myUnits.findIndex(u => attack.set.some(c => c.x==u.x && c.y==u.y)) : -1
@@ -764,37 +763,7 @@
 										let pta = enemUnits.findIndex(u => Math.abs(u.x-attack.x-Math.floor((attack.w ?? 1)/2)) <= (attack.w ?? 1)/2 && Math.abs(attack.y-u.y+Math.floor((attack.h ?? 1)/2)) <= (attack.h ?? 1)/2)
 										let pta2 = attack.ffire ? myUnits.findIndex(u => Math.abs(u.x-attack.x-Math.floor(attack.w/2)) <= ((attack.w ?? 1) ?? 1)/2 && Math.abs(attack.y-u.y+Math.floor((attack.h ?? 1)/2)) <= (attack.h/2 ?? 1)) : -1
 										while ((i==0 || attack.pierce) && (pta >= 0 || pta2 >= 0)) {
-											target = pta >= 0 ? pta : pta2
-											ttype = pta >= 0
-											if (attack.dmg ?? true) {
-												const tent = (pta >= 0 ? enemUnits : myUnits)[target]
-												const eff = units[tent.type].death
-												const min = pta < 0;
-												(pta >= 0 ? enemUnits : myUnits).splice(target,1)
-												if (pta >= 0) sendData({"dataType":2,"unit":target})
-												else sendData({"dataType":3,"unit":target})
-												procSpec(eff,min,tent);
-											}
-											if (attack.pull) {
-												(pta >= 0 ? enemUnits : myUnits)[target].x -= attack.dir[0]*attack.pull;
-												(pta >= 0 ? enemUnits : myUnits)[target].y -= attack.dir[1]*attack.pull;
-												if (pta >= 0) sendData({"dataType":5,"unit":target,"x":enemUnits[target].x,"y":enemUnits[target].y})
-												else sendData({"dataType":1,"unit":target,"x":myUnits[target].x,"y":myUnits[target].y})
-											}
-											if (attack.swap && sel != undefined && i==0) {
-												(pta >= 0 ? enemUnits : myUnits)[target].x = un.x;
-												(pta >= 0 ? enemUnits : myUnits)[target].y = un.y;
-												if (pta >= 0) sendData({"dataType":5,"unit":target,"x":enemUnits[target].x,"y":enemUnits[target].y})
-												else sendData({"dataType":1,"unit":target,"x":myUnits[target].x,"y":myUnits[target].y})
-											}
-											if ((attack.goto || attack.swap) && sel != undefined && i==0) {
-												un.x = attack.x
-												un.y = attack.y
-												sendData({"dataType":1,"unit":sel,"x":un.x,"y":un.y})
-											}
-											un.moved = 2
-											sel = undefined
-											seltype = undefined
+											dealWithAttack(attack,un,pta,pta2)
 											i++
 											pta = enemUnits.findIndex(u => Math.abs(u.x-attack.x-Math.floor((attack.w ?? 1)/2)) <= (attack.w ?? 1)/2 && Math.abs(attack.y-u.y+Math.floor((attack.h ?? 1)/2)) <= (attack.h ?? 1)/2)
 											pta2 = attack.ffire ? myUnits.findIndex(u => Math.abs(u.x-attack.x-Math.floor(attack.w/2)) <= ((attack.w ?? 1) ?? 1)/2 && Math.abs(attack.y-u.y+Math.floor((attack.h ?? 1)/2)) <= (attack.h/2 ?? 1)) : -1
@@ -821,15 +790,58 @@
 				clickable.push({"x":1050+Math.floor(i/6)*100,"y":100*(i%6),"w":100,"h":100,"onclick":function () {selFromDraw(this.pos)},"pos":i})
 			}
 			
+			function dealWithAttack(attack,un,pta,pta2) {
+				target = pta >= 0 ? pta : pta2
+				ttype = pta >= 0
+				const targetted = (pta >= 0 ? enemUnits : myUnits)
+				if (attack.convert) {
+					const newunit = {"x":targetted[target].x,"y":targetted[target].y,"type":attack.convert,"moved":2};
+					myUnits.push(newunit);
+					procSpec(units[newunit.type].spawn ?? {},true,newunit)
+					sendData({...newunit,"dataType":0});
+				}
+				if (attack.dmg ?? true) {
+					const tent = targetted[target]
+					const eff = units[tent.type].death
+					const min = pta < 0;
+					targetted.splice(target,1)
+					if (pta >= 0) sendData({"dataType":2,"unit":target})
+					else sendData({"dataType":3,"unit":target})
+					procSpec(eff,min,tent);
+				}
+				if (attack.pull) {
+					targetted[target].x -= attack.dir[0]*attack.pull;
+					targetted[target].y -= attack.dir[1]*attack.pull;
+					if (pta >= 0) sendData({"dataType":5,"unit":target,"x":enemUnits[target].x,"y":enemUnits[target].y})
+					else sendData({"dataType":1,"unit":target,"x":myUnits[target].x,"y":myUnits[target].y})
+				}
+				if (attack.swap && sel != undefined && i==0) {
+					targetted[target].x = un.x;
+					targetted[target].y = un.y;
+					if (pta >= 0) sendData({"dataType":5,"unit":target,"x":enemUnits[target].x,"y":enemUnits[target].y})
+					else sendData({"dataType":1,"unit":target,"x":myUnits[target].x,"y":myUnits[target].y})
+				}
+				if ((attack.goto || attack.swap) && sel != undefined && i==0) {
+					un.x = attack.x
+					un.y = attack.y
+					sendData({"dataType":1,"unit":sel,"x":un.x,"y":un.y})
+				}
+				un.moved = 2
+				sel = undefined
+				seltype = undefined
+			}
+			
 			function processMove(un,unit,att,at) {
 				switch (unit.move.style) {
 					case (1):
 						unit = JSON.parse(JSON.stringify(unit))
 						if (!pid) {
+							let w = 0
 							unit.move.set.forEach((e) => {
 								e.reverse()
+								w = Math.max(w,e.length)
 							})
-							if (unit.move.offset) unit.move.offset[0] *= -1
+							if (unit.move.offset) unit.move.offset[0] = unit.move.offset[0]*-1-(1-w%2)//-(1-(unit.move.offset[0]%2))
 						}
 					case (0):
 						const voff = Math.floor(unit.move.set.length/2)+(unit.move.offset ?? [0,0])[1]
@@ -902,7 +914,7 @@
 					//console.log("My peer ID is: " + id);
 				});
 			} else if (!inIframe) {
-				const link = window.location.href+(window.location.href.includes("?") ? "&" : "?")+"offline=true"
+				const link = window.location.href+(window.location.href.includes("?") ? "&" : "?")+"offline=true&offlinep2=true"
 				body.insertAdjacentHTML("beforeend","<iframe style='position:absolute;top:0px;' id='ifr' src='"+link+"'></iframe>")
 				ifr.style.height = 500+"px"
 				pid = 0

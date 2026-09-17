@@ -45,7 +45,7 @@
 				let rowc = 0
 				let ins = "<table id='fwtable'>"
 				for (const [ee,e] of Object.entries(units)) {
-					if (ee == "villager") continue;
+					if (!(e.deck ?? true)) continue;
 					if (!((e.cost ?? 0) <= prevm)) {
 						prevm = (e.cost ?? 0)
 						ins += "</tr><tr id='row"+rowc+"'><td>"+prevm+" Mana</td>"
