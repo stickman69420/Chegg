@@ -25,6 +25,7 @@
 	"attack": [
 		{
 			"style": 3,
+			"cost": 2,
 			"set": [
 				[false,true,false],
 				[true,true,true],
@@ -36,6 +37,7 @@
 		},
 		{
 			"style": 3,
+			"cost": 2,
 			"set": [
 				[false,true,false],
 				[true,true,true],
@@ -47,6 +49,7 @@
 		},
 		{
 			"style": 3,
+			"cost": 2,
 			"set": [
 				[false,true,false],
 				[true,true,true],
@@ -58,6 +61,7 @@
 		},
 		{
 			"style": 3,
+			"cost": 2,
 			"set": [
 				[false,true,false],
 				[true,true,true],
@@ -69,6 +73,7 @@
 		},
 		{
 			"style": 3,
+			"cost": 2,
 			"set": [
 				[false,true,false],
 				[true,true,true],
@@ -80,6 +85,7 @@
 		},
 		{
 			"style": 3,
+			"cost": 2,
 			"set": [
 				[false,false,false],
 				[true,true,true],
@@ -91,6 +97,7 @@
 		},
 		{
 			"style": 3,
+			"cost": 2,
 			"set": [
 				[false,true,false],
 				[true,true,true],
@@ -102,6 +109,7 @@
 		},
 		{
 			"style": 3,
+			"cost": 2,
 			"set": [
 				[false,true,false],
 				[true,true,true],
@@ -113,6 +121,7 @@
 		},
 		{
 			"style": 3,
+			"cost": 2,
 			"set": [
 				[false,true,false],
 				[true,true,false],
@@ -124,6 +133,7 @@
 		},
 		{
 			"style": 3,
+			"cost": 2,
 			"set": [
 				[false,true,false],
 				[true,true,true],
@@ -135,6 +145,7 @@
 		},
 		{
 			"style": 3,
+			"cost": 2,
 			"set": [
 				[false,true,false],
 				[true,true,true],
@@ -146,6 +157,7 @@
 		},
 		{
 			"style": 3,
+			"cost": 2,
 			"set": [
 				[false,true,false],
 				[false,true,true],

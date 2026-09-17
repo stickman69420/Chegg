@@ -1,5 +1,6 @@
 {
 	"img": "villager",
+	"deck": false,
 	"move": {
 		"style":0,
 		"set": [
