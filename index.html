@@ -22,7 +22,7 @@
 		<a href="./mapbuilder.html">Create a map</a><br>
 		<a href="./addoncompiler.html">Compile an addon</a><br>
 		<button onclick="loadM()">Load map</button><button onclick="localStorage.removeItem('map')">Reset map</button><br>
-		<button onclick="loadA()">Add an addon</button><button onclick="if (confirm('Are you sure you want to permanently delete all addons?')) {const db = indexedDB.deleteDatabase('mods');db.onsuccess=(() => {location.reload();})}">Delete all addons</button><!--button onclick="getEverything()">Get all addon data</button-->
+		<button onclick="loadA()">Add an addon</button><button onclick="if (confirm('Are you sure you want to permanently delete all addons?')) {const db = indexedDB.deleteDatabase('mods');db.onsuccess=(() => {location.reload();})}">Delete all addons</button><a href="https://github.com/stickman69420/Chegg/tree/dcff025dc6d101dc7d5e14bbd3cd6586ea39061a/example_addons">Example addons</a><!--button onclick="getEverything()">Get all addon data</button-->
 		<br><strong style="color:red;font-size:1.25em;">IMPORTANT NOTE: ADDON SHARING CURRENTLY IS NOT SUPPORTED. YOU OPPONENT MUST ALSO HAVE DOWNLOADED THE SAME ADDON FOR IT TO WORK</strong>
 		<script src="./definitions.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/@zip.js/zip.js@2.14.0/dist/zip.min.js"></script>
