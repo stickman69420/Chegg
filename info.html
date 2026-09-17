@@ -37,7 +37,9 @@
 				for (const [key,value] of Object.entries(allAddonData)) {
 					if (localStorage.getItem(key.replace(/[^\w]/gi, '_')) == "true") {
 						value.filter(d => d instanceof Blob).forEach((e) => {
-							document.body.insertAdjacentHTML("beforeend","<img src='"+URL.createObjectURL(e)+"'>")
+							const ourl = URL.createObjectURL(e)
+							document.body.insertAdjacentHTML("beforeend","<img src='"+ourl+"'>")
+							URL.revokeObjectURL(ourl)
 						})
 					}
 				}
